@@ -36,11 +36,16 @@ const els = {
   statusNotes: $('statusNotes'), statusTime: $('statusTime'), statusHint: $('statusHint'),
   saveState: $('saveState'), toast: $('toast'),
   modal: $('mapListModal'), modalClose: $('modalClose'), mapList: $('mapList'), newMapBtn: $('newMapBtn'),
+  uploadMapBtn: $('uploadMapBtn'), uploadMapFile: $('uploadMapFile'),
+  publishBtn: $('publishBtn'),
+  loginModal: $('loginModal'), loginUid: $('loginUid'), loginPw: $('loginPw'),
+  loginErr: $('loginErr'), loginCancel: $('loginCancel'), loginSubmit: $('loginSubmit'),
   keybindModal: $('keybindModal'), keybindClose: $('keybindClose'),
   keybindRows: $('keybindRows'), keybindReset: $('keybindReset'),
 };
 
 // ---------- 状态 ----------
+let scrubbing = false;   // 标尺/波形拖动 seek 中（供视口跟随判断）
 const state = {
   mapId: null,
   name: '未命名谱面',
@@ -370,7 +375,8 @@ function updatePlayheadUI() {
   els.playhead.style.display = 'block';
   els.timeLabel.textContent = `${fmtTime(state.currentTime)} / ${fmtTime(state.duration)}`;
   els.statusTime.textContent = `时间: ${state.currentTime.toFixed(3)}s`;
-  if (state.follow && (state.playing || state.record)) {
+  // 视口跟随：播放/录制/拖动进度时 playhead 靠边则自动滚动
+  if (state.follow && (state.playing || state.record || scrubbing)) {
     const sa = els.scrollArea;
     const vw = sa.clientWidth;
     if (x < sa.scrollLeft + 140) sa.scrollLeft = Math.max(0, x - 140);
@@ -636,11 +642,14 @@ function detectBPM() {
 async function saveMap(silent) {
   state.name = els.mapName.value.trim() || '未命名谱面';
   state.bpm = parseFloat(els.bpmInput.value) || 120;
+  // 登录态下保存，服务端记录谱面归属
+  const user = getLoginUser();
   const payload = {
     id: state.mapId || undefined,
     name: state.name, bpm: state.bpm, offset: state.offset,
     keyCount: state.keyCount, keys: state.keys,
-    notes: state.notes, duration: state.duration
+    notes: state.notes, duration: state.duration,
+    token: user ? user.token : undefined
   };
   const res = await fetch(state.mapId ? `/api/maps/${state.mapId}` : '/api/maps', {
     method: state.mapId ? 'PUT' : 'POST',
@@ -675,7 +684,11 @@ function loadMap(map) {
 }
 
 async function refreshMapList() {
-  const maps = await (await fetch('/api/maps')).json();
+  // scope=all + token：官方谱 + 自己的谱（按登录者过滤），列表隐藏官方谱只显示自己的
+  const user = getLoginUser();
+  const qs = user ? `&token=${encodeURIComponent(user.token)}` : '';
+  const maps = (await (await fetch(`/api/maps?scope=all${qs}`)).json())
+    .filter(m => !m.official);
   els.mapList.replaceChildren();
   if (!maps.length) {
     const li = document.createElement('li');
@@ -686,8 +699,11 @@ async function refreshMapList() {
   }
   maps.forEach(m => {
     const li = document.createElement('li');
+    const badge = m.official ? '<span class="m-badge off">官方</span>'
+      : m.published ? '<span class="m-badge pub">已上传</span>'
+      : '<span class="m-badge draft">草稿</span>';
     li.innerHTML = `
-      <span class="m-name">${escapeHtml(m.name)}</span>
+      <span class="m-name">${escapeHtml(m.name)}${badge}</span>
       <span class="m-meta">${m.bpm} BPM · ${m.keyCount || 4}K · ${m.noteCount} 音符</span>
       <span class="m-del" title="删除">🗑</span>`;
     li.querySelector('.m-name').addEventListener('click', async () => {
@@ -714,6 +730,54 @@ async function refreshMapList() {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+// ---------- 上传谱面：导入 JSON 文件 ----------
+// 校验谱面结构，id 冲突时生成新 id，保存后加载进编辑器
+els.uploadMapBtn.addEventListener('click', () => els.uploadMapFile.click());
+els.uploadMapFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';   // 允许重复选择同一文件
+  if (!file) return;
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    toast('JSON 解析失败，请检查文件格式');
+    return;
+  }
+  if (!data || !Array.isArray(data.notes)) {
+    toast('无效谱面：缺少 notes 数组');
+    return;
+  }
+  // id 冲突时生成新 id，避免覆盖已有谱面
+  const exist = await (await fetch('/api/maps')).json();
+  let id = data.id && /^[a-zA-Z0-9_-]{1,64}$/.test(data.id) ? data.id : `map_${Date.now().toString(36)}`;
+  while (exist.some(m => m.id === id)) id = `map_${Date.now().toString(36)}`;
+
+  const res = await fetch('/api/maps', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id,
+      name: data.name || file.name.replace(/\.json$/i, ''),
+      bpm: data.bpm || 120,
+      offset: data.offset || 0,
+      keyCount: data.keyCount || 4,
+      keys: data.keys,
+      notes: data.notes,
+      duration: data.duration || state.duration,
+    }),
+  });
+  if (!res.ok) {
+    toast('上传失败：' + (await res.json()).error);
+    return;
+  }
+  const map = await res.json();
+  loadMap(map);
+  refreshMapList();
+  els.modal.classList.add('hidden');
+  toast(`已导入「${map.name}」（${map.notes.length} 音符）`);
+});
 
 // ---------- 交互：放置 / 拖动 / 删除 ----------
 function laneFromY(clientY) {
@@ -751,13 +815,13 @@ els.laneRows.addEventListener('mousedown', e => {
     return;
   }
 
-  // 空白处：放置新音符
+  // 空白处：放置新音符（按住向右拖 = 直接画出 hold，无需录制）
   const newNote = { time, lane, type: 'tap' };
   state.notes.push(newNote);
   state.notes.sort((a, b) => a.time - b.time);
   state.selected = state.notes.indexOf(newNote);
   renderNotes();
-  state.drag = { type: 'note', idx: state.selected, note: newNote, grabOffset: 0, moved: false };
+  state.drag = { type: 'create', idx: state.selected, note: newNote, origTime: time, grabOffset: 0, moved: false };
 });
 
 document.addEventListener('mousemove', e => {
@@ -770,6 +834,22 @@ document.addEventListener('mousemove', e => {
     // 就地更新尾条宽度
     const el = els.laneRows.querySelector(`.note[data-idx="${d.idx}"]`);
     if (el) setTailW(el, d.note);
+    return;
+  }
+  // 新建拖画：右拖超阈值转为 hold，此后尾条跟随鼠标
+  if (d.type === 'create' && d.note.type === 'hold') {
+    d.note.endTime = clamp(time, d.note.time + 0.1, state.duration);
+    const el = els.laneRows.querySelector(`.note[data-idx="${d.idx}"]`);
+    if (el) setTailW(el, d.note);
+    return;
+  }
+  if (d.type === 'create' && time - d.origTime > 0.12) {
+    // 触发转 hold：头部留在落点，尾条向右延伸
+    d.note.type = 'hold';
+    d.note.time = d.origTime;
+    d.note.endTime = clamp(time, d.origTime + 0.1, state.duration);
+    const el = els.laneRows.querySelector(`.note[data-idx="${d.idx}"]`);
+    if (el) { addHoldDom(el, d.note); setTailW(el, d.note); }
     return;
   }
   // 移动音符（可跨轨道）
@@ -786,7 +866,7 @@ document.addEventListener('mouseup', () => {
   const d = state.drag;
   if (!d) return;
   state.drag = null;
-  if (d.type === 'note') {
+  if (d.type === 'note' || d.type === 'create') {
     state.notes.sort((a, b) => a.time - b.time);
     // 重新索引
     state.selected = state.notes.indexOf(d.note);
@@ -821,17 +901,27 @@ els.laneRows.addEventListener('dblclick', e => {
   renderNotes();
 });
 
-// 点击波形 / 标尺 seek
-els.waveCanvas.addEventListener('mousedown', e => {
-  if (state.record) return;
+// ---------- 标尺/波形：按住拖动 seek（前后移动实时预览） ----------
+// mousedown 落点即跳转，按住移动持续 seek：播放中音频即时跟进（可听预览），暂停中仅画面预览
+function scrubTo(clientX) {
   const rect = els.content.getBoundingClientRect();
-  seek(xToTime(e.clientX - rect.left));
-});
-els.rulerRow.addEventListener('mousedown', e => {
+  seek(xToTime(clientX - rect.left));
+}
+function startScrub(e) {
   if (state.record) return;
-  const rect = els.content.getBoundingClientRect();
-  seek(xToTime(e.clientX - rect.left));
+  scrubbing = true;
+  scrubTo(e.clientX);
+  e.preventDefault();   // 防止拖动选中文本
+}
+els.waveCanvas.addEventListener('mousedown', startScrub);
+els.rulerRow.addEventListener('mousedown', startScrub);
+document.addEventListener('mousemove', e => {
+  if (!scrubbing) return;
+  scrubTo(e.clientX);
 });
+document.addEventListener('mouseup', () => { scrubbing = false; });
+// 拖出窗口后松开也要结束
+window.addEventListener('blur', () => { scrubbing = false; });
 
 // ---------- 缩放 ----------
 function setZoom(z) {
@@ -954,6 +1044,120 @@ els.keybindRows.addEventListener('click', e => {
 });
 
 els.saveBtn.addEventListener('click', () => saveMap());
+
+// ---------- 上传社区：需登录且经验>1000 ----------
+// 登录后待执行的动作（登录成功回调）
+let afterLogin = null;
+
+// 读取本地登录态
+function getLoginUser() {
+  try {
+    const token = localStorage.getItem('ottohub_token');
+    return token ? { token, uid: localStorage.getItem('ottohub_uid'), username: localStorage.getItem('ottohub_username') } : null;
+  } catch { return null; }
+}
+
+// 上传社区主流程：保存 → 校验登录 → 调发布接口
+els.publishBtn.addEventListener('click', async () => {
+  // 音符量预检（服务端还会再验）
+  if (!(state.notes.length > 100)) {
+    toast(`音符量不足：需 >100，当前 ${state.notes.length}`);
+    return;
+  }
+  // 先保存确保谱面已入库
+  const saved = await saveMap(true);
+  if (!saved) { toast('保存失败，无法上传'); return; }
+  const user = getLoginUser();
+  if (!user) {
+    // 未登录：弹登录框，成功后自动续跑
+    afterLogin = () => doPublish(saved.id);
+    openLogin();
+    return;
+  }
+  doPublish(saved.id);
+});
+
+// 调发布接口（服务端二次验证 token 与经验）
+async function doPublish(mapId) {
+  const user = getLoginUser();
+  if (!user) return;
+  els.publishBtn.disabled = true;
+  try {
+    const res = await fetch(`/api/maps/${mapId}/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: user.token }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      toast(`已上传社区（by ${data.uploader.username}）`);
+    } else if (res.status === 401) {
+      // token 失效：清登录态并弹登录框重试
+      ['token', 'uid', 'username', 'avatar'].forEach(k => localStorage.removeItem('ottohub_' + k));
+      afterLogin = () => doPublish(mapId);
+      openLogin();
+    } else {
+      toast(data.error || '上传失败');
+    }
+  } catch {
+    toast('网络错误，上传失败');
+  }
+  els.publishBtn.disabled = false;
+}
+
+// ---------- 登录弹窗 ----------
+function openLogin() {
+  els.loginErr.textContent = '';
+  els.loginModal.hidden = false;
+  els.loginUid.focus();
+}
+function closeLogin() {
+  els.loginModal.hidden = true;
+  afterLogin = null;
+}
+els.loginCancel.addEventListener('click', closeLogin);
+els.loginModal.addEventListener('click', e => { if (e.target === els.loginModal) closeLogin(); });
+els.loginPw.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+els.loginSubmit.addEventListener('click', doLogin);
+
+// 执行登录：代理到 api.ottohub.cn
+async function doLogin() {
+  const uid = els.loginUid.value.trim();
+  const pw = els.loginPw.value;
+  if (!uid || !pw) { els.loginErr.textContent = '请输入账号和密码'; return; }
+  els.loginSubmit.disabled = true;
+  els.loginSubmit.textContent = '登录中…';
+  try {
+    const r = await fetch('/api/ottohub/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid_email: uid, pw }),
+    });
+    const data = await r.json();
+    if (r.ok) {
+      // 本地存登录态（与首页/游戏页共用）
+      localStorage.setItem('ottohub_token', data.token);
+      localStorage.setItem('ottohub_uid', data.uid || '');
+      localStorage.setItem('ottohub_username', data.username || '');
+      localStorage.setItem('ottohub_avatar', data.avatar_url || '');
+      els.loginPw.value = '';
+      els.loginModal.hidden = true;
+      // 前端预检经验门槛（服务端发布时还会再验一次）
+      if (!(Number(data.experience) > 100)) {
+        toast(`经验不足：需 >100，当前 ${data.experience ?? '未知'}`);
+        return;
+      }
+      toast(`已登录：${data.username}`);
+      if (afterLogin) { const fn = afterLogin; afterLogin = null; fn(); }
+    } else {
+      els.loginErr.textContent = data.message === 'error_password' ? '账号或密码错误' : (data.message || '登录失败');
+    }
+  } catch {
+    els.loginErr.textContent = '网络错误，请重试';
+  }
+  els.loginSubmit.disabled = false;
+  els.loginSubmit.textContent = '登 录';
+}
 els.playtestBtn.addEventListener('click', async () => {
   const saved = await saveMap(true);
   if (saved) window.open(`/game.html?id=${saved.id}`, '_blank');

@@ -1,0 +1,87 @@
+{
+  "map_auto_bpm": [
+    {
+      "uid": "5558",
+      "username": "STCaoMei",
+      "score": 99900,
+      "acc": 96.5,
+      "maxCombo": 182,
+      "rank": "S",
+      "counts": {
+        "great": 20,
+        "miss": 2,
+        "perfect": 150,
+        "good": 10
+      },
+      "createdAt": "2026-08-20T15:54:24.686Z"
+    }
+  ],
+  "map_8k_master": [
+    {
+      "uid": "5558",
+      "username": "STCaoMei",
+      "score": 15200,
+      "acc": 2.24,
+      "maxCombo": 3,
+      "rank": "KO",
+      "counts": {
+        "perfect": 11,
+        "great": 4,
+        "good": 1,
+        "miss": 23
+      },
+      "createdAt": "2026-08-20T15:56:16.652Z"
+    }
+  ],
+  "map_8594cc48": [
+    {
+      "uid": "5558",
+      "username": "STCaoMei",
+      "score": 45500,
+      "acc": 21.56,
+      "maxCombo": 11,
+      "rank": "KO",
+      "counts": {
+        "perfect": 26,
+        "great": 25,
+        "good": 15,
+        "miss": 14
+      },
+      "createdAt": "2026-08-20T15:58:27.414Z"
+    }
+  ],
+  "map_959c5a93": [
+    {
+      "uid": "5558",
+      "username": "STCaoMei",
+      "score": 0,
+      "acc": 0,
+      "maxCombo": 0,
+      "rank": "KO",
+      "counts": {
+        "perfect": 0,
+        "great": 0,
+        "good": 0,
+        "miss": 20
+      },
+      "createdAt": "2026-08-20T16:10:57.211Z"
+    }
+  ],
+  "map_d1ce982b": [
+    {
+      "uid": "5558",
+      "username": "STCaoMei",
+      "score": 83200,
+      "acc": 72.98,
+      "maxCombo": 35,
+      "rank": "C",
+      "counts": {
+        "perfect": 65,
+        "great": 18,
+        "good": 13,
+        "miss": 8
+      },
+      "createdAt": "2026-08-20T16:15:49.326Z"
+    }
+  ]
+}

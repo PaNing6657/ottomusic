@@ -10,11 +10,13 @@
 
 <header class="toolbar">
   <div class="brand">
-    <div class="logo">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="#fff"><path d="M4 2.5v11L13 8z"/></svg>
-    </div>
+    <a class="logo-link" href="/" title="返回选谱主页">
+      <div class="logo">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="#fff"><path d="M4 2.5v11L13 8z"/></svg>
+      </div>
+    </a>
     <div class="brand-text">
-      <span class="title">MAP EDITOR</span>
+      <span class="title">NOTCH大战古镇兴</span>
       <span class="title-cn">谱面编辑器</span>
     </div>
   </div>
@@ -69,10 +71,25 @@
 
   <div class="tool-group">
     <button id="saveBtn" class="btn primary" title="Ctrl+S">💾 保存</button>
+    <button id="publishBtn" class="btn accent" title="保存并上传到社区（需登录、经验>100、试玩通过、音符>100）">⬆ 上传社区</button>
     <button id="playtestBtn" class="btn accent" title="在游戏页试玩当前谱面">🎮 试玩</button>
     <button id="listBtn" class="btn ghost">谱面库</button>
   </div>
 </header>
+
+<!-- 登录弹窗（上传社区用） -->
+<div class="modal-mask" id="loginModal" hidden>
+  <div class="modal-card">
+    <h3 class="modal-title">登录 OttoHub</h3>
+    <input id="loginUid" type="text" placeholder="用户ID或邮箱" autocomplete="username" maxlength="64">
+    <input id="loginPw" type="password" placeholder="密码" autocomplete="current-password" maxlength="20">
+    <div class="login-err" id="loginErr"></div>
+    <div class="modal-btns">
+      <button id="loginCancel" class="btn ghost">取消</button>
+      <button id="loginSubmit" class="btn primary">登 录</button>
+    </div>
+  </div>
+</div>
 
 <main id="editorWrap" class="editor-wrap">
   <!-- 录制中提示条 -->
@@ -119,7 +136,11 @@
       <button id="modalClose" class="btn ghost">✕</button>
     </div>
     <div class="modal-body">
-      <button id="newMapBtn" class="btn primary block">＋ 新建谱面</button>
+      <div class="modal-btns">
+        <button id="newMapBtn" class="btn primary">＋ 新建谱面</button>
+        <button id="uploadMapBtn" class="btn accent" title="从本地 JSON 文件导入谱面">📥 导入 JSON</button>
+      </div>
+      <input id="uploadMapFile" type="file" accept=".json,application/json" hidden>
       <ul id="mapList" class="map-list"></ul>
     </div>
   </div>

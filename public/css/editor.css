@@ -56,6 +56,8 @@ body {
 }
 
 .brand { display: flex; align-items: center; gap: 10px; margin-right: 6px; }
+.logo-link { text-decoration: none; }
+.logo-link:hover .logo { background: #2563eb; }
 .logo {
   width: 28px; height: 28px;
   display: grid; place-items: center;
@@ -115,6 +117,9 @@ body {
 .btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
 .btn.ghost:hover { background: #f3f4f6; color: var(--text); }
 .btn.block { width: 100%; margin-bottom: 12px; padding: 10px; }
+/* 谱面库：新建/上传并排 */
+.modal-btns { display: flex; gap: 10px; margin-bottom: 12px; }
+.modal-btns .btn { flex: 1; padding: 10px; }
 
 .zoom-label {
   font-family: var(--font-mono);
@@ -196,6 +201,7 @@ body {
   border-bottom: 1px solid var(--border);
   background: var(--panel);
   z-index: 2;
+  cursor: ew-resize;   /* 标尺可按住左右拖动 seek */
 }
 .wave-row {
   height: var(--wave-h);
@@ -203,7 +209,7 @@ body {
   background: #fbfbfc;
   z-index: 2;
 }
-#waveCanvas { display: block; position: absolute; top: 0; left: 0; cursor: pointer; pointer-events: auto; }
+#waveCanvas { display: block; position: absolute; top: 0; left: 0; cursor: ew-resize; pointer-events: auto; }
 
 .lane-rows { position: relative; z-index: 2; }
 .lane-row {
@@ -394,6 +400,38 @@ body.recording .lane-row:hover { background-color: transparent; }
   color: var(--text);
 }
 .modal-body { padding: 16px; overflow-y: auto; }
+
+/* 登录弹窗（上传社区） */
+.modal-mask {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(20, 22, 28, .35);
+  display: grid; place-items: center;
+}
+.modal-mask[hidden] { display: none; }
+.modal-card {
+  width: 320px; padding: 22px 20px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px;
+  animation: modalIn .18s ease-out;
+}
+.modal-card .modal-title { margin-bottom: 14px; }
+.modal-card input {
+  width: 100%; padding: 9px 12px; margin-bottom: 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg, #fff); color: var(--text);
+  font-size: 13px; outline: none;
+}
+.modal-card input:focus { border-color: var(--accent, #3b6ef6); }
+.login-err { color: #e05252; font-size: 12px; margin: 2px 0 4px; min-height: 14px; }
+
+/* 谱面库状态徽标 */
+.m-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+  vertical-align: 1px; font-weight: 600;
+}
+.m-badge.off { color: #3b6ef6; background: #eef2fe; }
+.m-badge.pub { color: #2e9e6b; background: #e9f6ef; }
+.m-badge.draft { color: #a0a7b8; background: #f0f1f4; }
 
 .map-list { list-style: none; }
 .map-list li {

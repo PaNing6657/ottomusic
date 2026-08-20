@@ -3,141 +3,410 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEON ARROWS · 下落式箭头音乐游戏</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<title>NOTCH大战古镇兴 · 音乐对战</title>
 <style>
   :root {
-    --cyan: #00e5ff; --pink: #ff2d95; --yellow: #ffc400; --green: #00ff9d;
-    --font-display: 'Orbitron', 'Segoe UI', sans-serif;
-    --font-mono: 'Share Tech Mono', Consolas, monospace;
-    --font-body: 'Rajdhani', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+    --bg: #f5f6f8; --card: #ffffff; --border: #e3e6eb;
+    --text: #1c2333; --text-2: #6b7385; --text-3: #a0a7b8;
+    --accent: #3b6ef6; --accent-weak: #eef2fe;
+    --gold: #c78a1e; --green: #2e9e6b;
+    --font-body: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     min-height: 100vh;
-    display: grid; place-items: center;
-    background: #04050c;
-    color: #eaf0ff;
+    background: var(--bg); color: var(--text);
     font-family: var(--font-body);
-    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
   }
-  body::before {
-    content: ""; position: fixed; inset: 0; pointer-events: none;
-    background:
-      radial-gradient(1100px 620px at 50% -18%, rgba(0,229,255,.14), transparent 60%),
-      radial-gradient(900px 700px at 96% 108%, rgba(255,45,149,.11), transparent 62%),
-      radial-gradient(900px 700px at 4% 108%, rgba(0,255,157,.07), transparent 62%),
-      linear-gradient(180deg, #04050c, #080a18 55%, #04050c);
-  }
-  body::after {
-    content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .5;
-    background: repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px);
-  }
-  .grid-floor {
-    position: fixed; inset: 0; pointer-events: none;
-    background:
-      linear-gradient(rgba(0,229,255,.05) 1px, transparent 1px) 0 0 / 100% 52px,
-      linear-gradient(90deg, rgba(0,229,255,.05) 1px, transparent 1px) 0 0 / 52px 100%;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 55%, #000 100%);
-    mask-image: linear-gradient(180deg, transparent 0%, #000 55%, #000 100%);
-  }
-  .wrap { position: relative; text-align: center; padding: 40px; z-index: 5; }
-  .neon-tag {
-    font-family: var(--font-mono); font-size: 13px; letter-spacing: 9px;
-    color: var(--cyan); text-shadow: 0 0 12px rgba(0,229,255,.9);
-    margin-bottom: 16px;
-    animation: tagGlow 3s ease-in-out infinite;
-  }
-  @keyframes tagGlow { 0%,100% { opacity: .8; } 50% { opacity: 1; } }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 28px 72px; }
+
+  /* 头部 */
+  header { margin-bottom: 36px; }
   .logo {
-    font-family: var(--font-display);
-    font-size: 74px; font-weight: 900; letter-spacing: 10px;
-    color: #eaf0ff;
-    animation: flicker 5s linear infinite;
+    font-size: 30px; font-weight: 700; letter-spacing: 2px; color: var(--text);
   }
-  .logo span {
-    background: linear-gradient(90deg, var(--cyan), var(--pink) 55%, var(--yellow));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 20px rgba(0,229,255,.5));
+  .logo span { color: var(--accent); }
+  .sub { font-size: 14px; color: var(--text-2); margin-top: 8px; letter-spacing: 4px; }
+
+  /* 顶部操作行 */
+  .topbar { display: flex; gap: 12px; margin: 28px 0 36px; }
+  .top-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 14px; padding: 9px 18px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--card); color: var(--text-2);
+    text-decoration: none; transition: all .15s;
   }
-  @keyframes flicker {
-    0%, 6%, 8%, 100% { opacity: 1; text-shadow: 0 0 10px #fff, 0 0 30px rgba(0,229,255,.8), 0 0 70px rgba(255,45,149,.45); }
-    7% { opacity: .3; }
-    40%, 42% { opacity: 1; }
-    41% { opacity: .55; }
+  .top-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* 谱面选择 */
+  .sec-title {
+    font-size: 13px; font-weight: 600; letter-spacing: 3px;
+    color: var(--text-3); margin-bottom: 16px;
   }
-  .sub {
-    font-size: 16px; letter-spacing: 12px; color: #8b95c4;
-    margin: 14px 0 46px;
+  .maps { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .map-card {
+    position: relative; text-align: left;
+    padding: 20px 20px 16px; border-radius: 10px; cursor: pointer;
+    background: var(--card); border: 1px solid var(--border);
+    transition: border-color .15s, box-shadow .15s;
   }
-  .cards { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
-  .card {
-    position: relative;
-    width: 300px; padding: 34px 26px 30px;
-    border-radius: 14px;
-    background: linear-gradient(180deg, rgba(16,20,42,.9), rgba(8,10,22,.92));
-    border: 1px solid #232b52;
-    text-decoration: none; color: #eaf0ff;
-    transition: all .2s;
-    display: block;
-    overflow: hidden;
+  .map-card:hover { border-color: #c9d2e3; box-shadow: 0 4px 16px rgba(28,35,51,.07); }
+  .map-card .m-name {
+    font-size: 16px; font-weight: 600; line-height: 1.4; margin-bottom: 12px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .card::before {
-    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
-    background: linear-gradient(90deg, var(--c1), var(--c2));
-    filter: drop-shadow(0 0 6px var(--c1));
-    opacity: .8;
+  .map-card .m-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .tag {
+    font-size: 12px; padding: 2px 9px; border-radius: 5px;
+    background: var(--accent-weak); color: var(--text-2);
   }
-  .card:hover {
-    transform: translateY(-6px);
-    border-color: var(--c1);
-    box-shadow: 0 0 34px rgba(0,229,255,.22), 0 20px 50px rgba(0,0,0,.5);
+  .tag.key { color: var(--accent); }
+  .tag.bpm { color: var(--gold); background: #faf4e6; }
+  .tag.diff { color: var(--green); background: #e9f6ef; }
+  .tag.notes { background: #f0f1f4; }
+  .map-card .m-play {
+    font-size: 13px; font-weight: 600; color: var(--accent);
   }
-  .card .icon {
-    font-family: var(--font-display);
-    font-size: 42px; margin-bottom: 18px;
-    color: var(--c1);
-    text-shadow: 0 0 18px var(--c1);
+  .map-card .m-lb {
+    font-size: 13px; margin-left: 16px; padding: 2px 10px; border-radius: 5px;
+    color: var(--gold); background: #faf4e6; cursor: pointer; border: none;
+    transition: background .15s;
   }
-  .card h2 { font-family: var(--font-display); font-size: 20px; letter-spacing: 3px; margin-bottom: 10px; }
-  .card p { font-size: 14px; color: #8b95c4; line-height: 1.7; }
-  .card .cta {
-    display: inline-block; margin-top: 18px;
-    font-family: var(--font-mono); font-size: 12px; letter-spacing: 2px;
-    color: var(--c1);
+  .map-card .m-lb:hover { background: #f3e8cf; }
+  .map-card .m-date {
+    position: absolute; right: 16px; bottom: 16px;
+    font-size: 11px; color: var(--text-3);
   }
-  .card:nth-child(1) { --c1: var(--cyan); --c2: #0091ff; }
-  .card:nth-child(2) { --c1: var(--pink); --c2: var(--violet, #8f6cff); }
-  .audio-info {
-    margin-top: 42px;
-    font-family: var(--font-mono); font-size: 13px; letter-spacing: 1px; color: #6f79a8;
+  .empty {
+    grid-column: 1 / -1; padding: 64px 0; text-align: center;
+    color: var(--text-3); font-size: 14px;
   }
-  .audio-info b { color: var(--yellow); text-shadow: 0 0 8px rgba(255,196,0,.5); }
+  /* 第二栏标题与上一栏拉开距离 */
+  .sec-title.user-sec { margin-top: 44px; }
+
+  /* 用户区（右上角） */
+  .user-box {
+    position: fixed; top: 20px; right: 24px; z-index: 50;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .user-chip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 14px 5px 5px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--border);
+    font-size: 13px; color: var(--text);
+  }
+  .user-chip img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; background: var(--accent-weak); }
+  .user-chip .logout { color: var(--text-3); cursor: pointer; margin-left: 2px; }
+  .user-chip .logout:hover { color: #e05252; }
+  .login-btn {
+    font-size: 13px; padding: 8px 18px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff;
+    transition: opacity .15s;
+  }
+  .login-btn:hover { opacity: .88; }
+
+  /* 弹窗通用 */
+  .modal-mask {
+    position: fixed; inset: 0; z-index: 200;
+    display: grid; place-items: center;
+    background: rgba(28,35,51,.35);
+  }
+  .modal-card {
+    width: 340px; padding: 28px 24px; border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    box-shadow: 0 12px 40px rgba(28,35,51,.14);
+  }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
+  .modal-card input {
+    width: 100%; padding: 10px 13px; margin-bottom: 10px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text);
+    font-size: 14px; outline: none; transition: border-color .15s;
+  }
+  .modal-card input:focus { border-color: var(--accent); }
+  .modal-err { color: #e05252; font-size: 12px; margin-bottom: 8px; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
+  .modal-btns button {
+    flex: 1; padding: 10px; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 600;
+    border: 1px solid var(--border); background: var(--card); color: var(--text-2);
+    transition: all .15s;
+  }
+  .modal-btns button:hover { color: var(--text); border-color: #c9d2e3; }
+  .modal-btns button.primary {
+    border-color: var(--accent); background: var(--accent); color: #fff;
+  }
+  .modal-btns button.primary:hover { opacity: .88; color: #fff; }
+  .modal-btns button:disabled { opacity: .6; cursor: default; }
+
+  /* 排行榜 */
+  .lb-modal { width: 430px; max-height: 78vh; display: flex; flex-direction: column; }
+  .lb-list { overflow-y: auto; flex: 1; }
+  .lb-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 12px; border-radius: 6px; font-size: 13px;
+  }
+  .lb-row:nth-child(odd) { background: var(--bg); }
+  .lb-row.me { background: var(--accent-weak); }
+  .lb-no { width: 34px; text-align: right; color: var(--text-3); flex-shrink: 0; }
+  .lb-no.top1 { color: var(--gold); font-weight: 700; }
+  .lb-no.top2 { color: #7c8496; font-weight: 700; }
+  .lb-no.top3 { color: #b0713f; font-weight: 700; }
+  .lb-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-rank { width: 30px; color: var(--green); flex-shrink: 0; font-weight: 600; }
+  .lb-acc { width: 62px; text-align: right; color: var(--text-2); flex-shrink: 0; }
+  .lb-score { width: 84px; text-align: right; color: var(--gold); flex-shrink: 0; font-weight: 600; }
+  .lb-empty { padding: 44px 0; text-align: center; color: var(--text-3); font-size: 13px; }
 </style>
 </head>
 <body>
-<div class="grid-floor"></div>
-<div class="wrap">
-  <div class="neon-tag">RHYTHM GAME</div>
-  <div class="logo">NEON <span>ARROWS</span></div>
-  <div class="sub">下 落 式 箭 头 音 乐 游 戏</div>
-  <div class="cards">
-    <a class="card" href="/editor.html">
-      <div class="icon">MAP</div>
-      <h2>谱面编辑器</h2>
-      <p>为「8月20日.wav」制作谱面：波形对齐、网格吸附、四轨道放置音符，保存后即刻试玩。</p>
-      <span class="cta">ENTER EDITOR →</span>
-    </a>
-    <a class="card" href="/game.html">
-      <div class="icon">PLAY</div>
-      <h2>游戏试玩</h2>
-      <p>W / S / A / D 或方向键接住下落的霓虹箭头，Perfect / Great / Good 判定，冲刺最高评级。</p>
-      <span class="cta">START GAME →</span>
-    </a>
+
+<!-- 右上角登录区 -->
+<div class="user-box" id="userBox"></div>
+
+<!-- 登录弹窗 -->
+<div class="modal-mask" id="loginModal" style="display:none">
+  <div class="modal-card">
+    <div class="modal-title">登录 OttoHub</div>
+    <input id="loginUid" type="text" placeholder="用户ID或邮箱" autocomplete="username" maxlength="64">
+    <input id="loginPw" type="password" placeholder="密码" autocomplete="current-password" maxlength="20">
+    <div class="modal-err" id="loginErr" style="display:none"></div>
+    <div class="modal-btns">
+      <button id="loginCancel">取消</button>
+      <button id="loginSubmit" class="primary">登 录</button>
+    </div>
   </div>
-  <div class="audio-info">AUDIO // <b>8月20日.wav</b> — 44.1kHz · 16bit · 立体声 · 约 2:23</div>
 </div>
+
+<!-- 排行榜弹窗 -->
+<div class="modal-mask" id="lbModal" style="display:none">
+  <div class="modal-card lb-modal">
+    <div class="modal-title" id="lbTitle">排行榜</div>
+    <div class="lb-list" id="lbList"></div>
+    <div class="modal-btns"><button id="lbClose">关 闭</button></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="logo">NOTCH <span>大战</span> 古镇兴</div>
+    <div class="sub">音乐对战机 · 节奏制胜</div>
+  </header>
+
+  <div class="topbar">
+    <a class="top-btn" href="/editor.html">谱面编辑器</a>
+  </div>
+
+  <!-- 第一栏：官方谱 -->
+  <div class="sec-title">官方谱</div>
+  <div id="mapsOfficial" class="maps"><div class="empty">加载中…</div></div>
+
+  <!-- 第二栏：用户上传 -->
+  <div class="sec-title user-sec">用户上传</div>
+  <div id="mapsUser" class="maps"><div class="empty">加载中…</div></div>
+</div>
+
+<script>
+'use strict';
+// HTML 转义（全局共用）
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// 首页曲谱选择：拉取谱面列表，按官方/用户分两栏渲染
+(async () => {
+  const offBox = document.getElementById('mapsOfficial');
+  const userBox2 = document.getElementById('mapsUser');
+  let maps;
+  try {
+    maps = await (await fetch('/api/maps')).json();
+  } catch {
+    offBox.innerHTML = '<div class="empty">谱面列表加载失败，请刷新重试</div>';
+    userBox2.innerHTML = '';
+    return;
+  }
+  // 难度标签：按音符密度
+  const diffOf = m => {
+    const d = m.noteCount / Math.max(1, m.duration || 143);
+    if (m.keyCount >= 8 || d > 4) return 'MASTER';
+    if (m.keyCount >= 6 || d > 2.4) return 'HARD';
+    if (m.keyCount >= 4 || d > 1.2) return 'NORMAL';
+    return 'EASY';
+  };
+  const fmtDate = s => {
+    const d = new Date(s);
+    return isNaN(d) ? '' : `${d.getMonth() + 1}/${d.getDate()}`;
+  };
+  // 渲染一张卡片到容器
+  const renderCard = (box, m) => {
+    const el = document.createElement('div');
+    el.className = 'map-card';
+    el.innerHTML = `
+      <div class="m-name">${esc(m.name || '未命名谱面')}</div>
+      <div class="m-tags">
+        <span class="tag key">${m.keyCount || 4}K</span>
+        <span class="tag bpm">${m.bpm || 120} BPM</span>
+        <span class="tag diff">${diffOf(m)}</span>
+        <span class="tag notes">${m.noteCount} 音符</span>
+      </div>
+      <span class="m-play">▶ 开始</span>
+      <span class="m-lb" title="排行榜">排行榜</span>
+      <span class="m-date">${fmtDate(m.updatedAt)}</span>`;
+    el.addEventListener('click', () => location.href = `/game.html?id=${encodeURIComponent(m.id)}`);
+    // 点"排行榜"打开榜单（不触发进游戏）
+    el.querySelector('.m-lb').addEventListener('click', e => {
+      e.stopPropagation();
+      openLeaderboard(m);
+    });
+    box.appendChild(el);
+  };
+  const officials = maps.filter(m => m.official);
+  // 用户上传栏：仅显示明确上传社区的谱（本地草稿不显示）
+  const users = maps.filter(m => !m.official && m.published);
+  offBox.replaceChildren();
+  userBox2.replaceChildren();
+  if (!officials.length) offBox.innerHTML = '<div class="empty">暂无官方谱</div>';
+  if (!users.length) userBox2.innerHTML = '<div class="empty">暂无用户谱 — 去编辑器制作或上传一个吧</div>';
+  officials.forEach(m => renderCard(offBox, m));
+  users.forEach(m => renderCard(userBox2, m));
+})();
+
+/* ============ OttoHub 登录 & 排行榜 ============ */
+const $ = id => document.getElementById(id);
+const userBox = $('userBox');
+
+// 本地登录态
+function getUser() {
+  try {
+    const token = localStorage.getItem('ottohub_token');
+    return token ? {
+      token,
+      uid: localStorage.getItem('ottohub_uid'),
+      username: localStorage.getItem('ottohub_username'),
+      avatar: localStorage.getItem('ottohub_avatar'),
+    } : null;
+  } catch { return null; }
+}
+function setUser(u) {
+  if (!u) {   // 退出登录
+    ['token', 'uid', 'username', 'avatar'].forEach(k => localStorage.removeItem('ottohub_' + k));
+    renderUser(); return;
+  }
+  localStorage.setItem('ottohub_token', u.token);
+  localStorage.setItem('ottohub_uid', u.uid || '');
+  localStorage.setItem('ottohub_username', u.username || '');
+  localStorage.setItem('ottohub_avatar', u.avatar || '');
+  renderUser();
+}
+
+// 渲染右上角用户区
+function renderUser() {
+  const u = getUser();
+  if (!u || !u.username) {
+    userBox.innerHTML = '<button class="login-btn" id="showLogin">登录</button>';
+    $('showLogin').addEventListener('click', openLogin);
+  } else {
+    userBox.innerHTML = `
+      <div class="user-chip">
+        <img src="${u.avatar || ''}" alt="" onerror="this.style.visibility='hidden'">
+        <span>${esc(u.username)}</span>
+        <span class="logout" title="退出登录">✕</span>
+      </div>`;
+    userBox.querySelector('.logout').addEventListener('click', () => { setUser(null); });
+  }
+}
+
+// 登录弹窗
+function openLogin() {
+  $('loginErr').style.display = 'none';
+  $('loginModal').style.display = 'grid';
+  $('loginUid').focus();
+}
+function closeLogin() { $('loginModal').style.display = 'none'; }
+$('loginCancel').addEventListener('click', closeLogin);
+$('loginModal').addEventListener('click', e => { if (e.target === $('loginModal')) closeLogin(); });
+$('loginUid').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginPw').focus(); });
+$('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('loginSubmit').addEventListener('click', doLogin);
+
+// 执行登录：代理到 api.ottohub.cn
+async function doLogin() {
+  const uid = $('loginUid').value.trim();
+  const pw = $('loginPw').value;
+  const err = $('loginErr');
+  if (!uid || !pw) { err.textContent = '请输入账号和密码'; err.style.display = 'block'; return; }
+  // file:// 协议下 fetch 相对路径必然失败，直接提示
+  if (location.protocol === 'file:') {
+    err.textContent = '请通过 http://localhost:3000 访问，不要直接双击打开 HTML 文件';
+    err.style.display = 'block';
+    return;
+  }
+  $('loginSubmit').disabled = true;
+  $('loginSubmit').textContent = '登录中…';
+  try {
+    // 单次请求：代理已顺带返回昵称，失败时降级显示 uid
+    const r = await fetch('/api/ottohub/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid_email: uid, pw }),
+    });
+    const data = await r.json();
+    if (r.ok) {
+      setUser({
+        token: data.token,
+        uid: data.uid,
+        username: data.username || `OttoHub用户#${data.uid}`,
+        avatar: data.avatar_url,
+      });
+      $('loginPw').value = '';
+      closeLogin();
+    } else {
+      err.textContent = data.message === 'error_password' ? '账号或密码错误' : (data.message || '登录失败');
+      err.style.display = 'block';
+    }
+  } catch (ex) {
+    // 显示具体异常，便于定位（连接拒绝/非JSON响应等）
+    err.textContent = '网络错误: ' + (ex && ex.message ? ex.message : '未知');
+    err.style.display = 'block';
+  }
+  $('loginSubmit').disabled = false;
+  $('loginSubmit').textContent = '登 录';
+}
+
+// 排行榜弹窗
+function openLeaderboard(map) {
+  $('lbTitle').textContent = `${map.name || '未命名'} · 排行榜`;
+  $('lbList').innerHTML = '<div class="lb-empty">加载中…</div>';
+  $('lbModal').style.display = 'grid';
+  const u = getUser();
+  const qs = u ? `?token=${encodeURIComponent(u.token)}` : '';
+  fetch(`/api/scores/${encodeURIComponent(map.id)}${qs}`)
+    .then(r => r.json())
+    .then(({ list, myRank }) => {
+      if (!list || !list.length) {
+        $('lbList').innerHTML = '<div class="lb-empty">暂无成绩 · 打完一局登顶第一</div>';
+        return;
+      }
+      const esc2 = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      $('lbList').innerHTML = list.map((e, i) => {
+        const no = i + 1;
+        const topCls = no === 1 ? 'top1' : no === 2 ? 'top2' : no === 3 ? 'top3' : '';
+        const me = u && String(e.uid) === String(u.uid) ? ' me' : '';
+        return `<div class="lb-row${me}">
+          <span class="lb-no ${topCls}">${no}</span>
+          <span class="lb-name">${esc2(e.username)}${me ? ' (我)' : ''}</span>
+          <span class="lb-rank">${esc2(e.rank)}</span>
+          <span class="lb-acc">${(+e.acc).toFixed(1)}%</span>
+          <span class="lb-score">${e.score}</span>
+        </div>`;
+      }).join('') + (myRank > 50 ? `<div class="lb-row me"><span class="lb-no">${myRank}</span><span class="lb-name">${esc2(u.username)} (我)</span><span class="lb-rank"></span><span class="lb-acc"></span><span class="lb-score">50名外</span></div>` : '');
+    })
+    .catch(() => { $('lbList').innerHTML = '<div class="lb-empty">加载失败</div>'; });
+}
+$('lbClose').addEventListener('click', () => { $('lbModal').style.display = 'none'; });
+$('lbModal').addEventListener('click', e => { if (e.target === $('lbModal')) $('lbModal').style.display = 'none'; });
+
+renderUser();
+</script>
 </body>
 </html>

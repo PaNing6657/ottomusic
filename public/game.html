@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>下落箭头 · NEON ARROWS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>NOTCH大战古镇兴</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -13,22 +13,69 @@
 
 <div class="bg-grid"></div>
 
+<!-- 对战人物立绘：一图两人，与背景同尺寸铺满；左右裁剪分属 notch / 古阵兴 -->
+<img id="charL" class="char l hidden" src="/assets/char.png" alt="notch">
+<img id="charR" class="char r hidden" src="/assets/char.png" alt="古阵兴">
+<!-- 受击差分：扣血瞬间切换显示，同布局裁剪 -->
+<img id="charHitL" class="char hit l hidden" src="/assets/char-hit.png" alt="">
+<img id="charHitR" class="char hit r hidden" src="/assets/char-hit.png" alt="">
+
 <!-- 开始遮罩 -->
 <div id="startOverlay" class="overlay">
   <div class="start-box">
-    <div class="neon-tag">RHYTHM GAME</div>
-    <h1 class="game-title">NEON <span>ARROWS</span></h1>
-    <p class="game-title-cn">下 落 箭 头 · 音 乐 游 戏</p>
+    <div class="neon-tag">VS RHYTHM</div>
+    <h1 class="game-title">NOTCH <span>大战</span> 古镇兴</h1>
+    <p class="game-title-cn">音 乐 对 战 · 节 奏 制 胜</p>
     <p id="mapInfo" class="map-info">加载中…</p>
     <!-- 键位提示由 JS 按谱面配置动态生成 -->
     <div id="keyHint" class="key-hint"></div>
     <button id="startBtn" class="start-btn">▶ 点击开始</button>
-    <p class="back-link"><a href="/editor.html" id="backEditor">← 返回谱面编辑器</a></p>
+    <button id="keybindBtn" class="keybind-btn" title="自定义键位">⌨ 键位设置</button>
+    <p class="back-link" hidden><a href="/editor.html" id="backEditor">← 返回谱面编辑器</a></p>
+    <!-- 开发者调试入口：点击输入暗号可开启自动弹 -->
+    <button id="devBtn" class="dev-btn" title="开发者工具">⭘ 调试</button>
+  </div>
+</div>
+
+<!-- 键位设置弹窗：每轨点击重新绑定主键 -->
+<div id="kbModal" class="dev-modal hidden">
+  <div class="dev-dialog kb-dialog">
+    <div class="dev-title">键位设置</div>
+    <p class="dev-desc">点击按键后按下新键位（每轨一个主键），设置仅对本机生效</p>
+    <div id="kbRows" class="kb-rows"></div>
+    <div class="dev-actions">
+      <button id="kbReset" class="btn">恢复默认</button>
+      <button id="kbCancel" class="btn">取消</button>
+      <button id="kbSave" class="btn primary">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 暗号解锁弹窗 -->
+<div id="devModal" class="dev-modal hidden">
+  <div class="dev-dialog">
+    <div class="dev-title">开发者调试</div>
+    <p class="dev-desc">输入暗号开启自动弹（自动打击全谱面，用于校验谱面/判定/offset）</p>
+    <input id="devPass" class="dev-input" type="password" placeholder="输入暗号" autocomplete="off">
+    <div id="devErr" class="dev-err hidden">暗号错误</div>
+    <div class="dev-actions">
+      <button id="devCancel" class="btn">取消</button>
+      <button id="devOk" class="btn primary">确认</button>
+    </div>
   </div>
 </div>
 
 <!-- 倒计时 -->
 <div id="countdown" class="countdown hidden">3</div>
+
+<!-- 竖屏旋转提示（手机竖屏时全屏遮挡） -->
+<div id="rotateTip" class="rotate-tip">
+  <div class="rt-icon">📱</div>
+  <div class="rt-text">请旋转手机至<b>横屏</b>游玩</div>
+</div>
+
+<!-- 触屏暂停按钮（仅触屏设备游戏中显示） -->
+<button id="pauseBtn" class="pause-btn hidden" title="暂停">⏸</button>
 
 <!-- 暂停遮罩 -->
 <div id="pausePanel" class="overlay hidden">
@@ -44,6 +91,26 @@
   <div class="hud-acc"><span id="acc">100.00%</span></div>
   <div class="hud-combo"><span id="combo">0</span><span class="unit">连击</span></div>
   <div class="hud-judge" id="lastJudge"></div>
+  <div id="autoBadge" class="auto-badge hidden">AUTO</div>
+</div>
+
+<!-- 对战血条：左 notch / 右 古阵兴，哪边按错扣哪边 -->
+<div id="hpBars" class="hp-bars hidden">
+  <div class="hp-side">
+    <div class="hp-name l">NOTCH</div>
+    <div class="hp-track">
+      <div class="hp-ghost l" id="hpGhostL"></div>
+      <div class="hp-fill l" id="hpFillL"></div>
+    </div>
+  </div>
+  <div class="hp-vs">VS</div>
+  <div class="hp-side">
+    <div class="hp-name r">古镇兴</div>
+    <div class="hp-track">
+      <div class="hp-ghost r" id="hpGhostR"></div>
+      <div class="hp-fill r" id="hpFillR"></div>
+    </div>
+  </div>
 </div>
 
 <!-- 舞台（轨道由 JS 按谱面 keyCount 动态生成） -->
@@ -59,6 +126,14 @@
   <div class="result-box">
     <div class="rank" id="rank">S</div>
     <h2 id="resultTitle">结算</h2>
+    <!-- 对战结果：双方剩余血量 -->
+    <div class="vs-line">
+      <span class="vs-name l" id="vsNameL">NOTCH</span>
+      <span class="vs-hp l" id="vsHpL">100</span>
+      <span class="vs-sep">:</span>
+      <span class="vs-hp r" id="vsHpR">100</span>
+      <span class="vs-name r" id="vsNameR">古镇兴</span>
+    </div>
     <div class="result-stats">
       <div class="stat"><span class="v" id="rScore">0</span><span class="l">分数</span></div>
       <div class="stat"><span class="v" id="rAcc">0%</span><span class="l">准确率</span></div>
@@ -70,9 +145,15 @@
       <span class="jc good">GOOD <b id="cO">0</b></span>
       <span class="jc miss">MISS <b id="cM">0</b></span>
     </div>
+    <!-- 官方排行榜（隐藏，成绩仍静默上传） -->
+    <div class="r-leaderboard" hidden>
+      <div class="r-lb-title">🏆 官方排行榜 <span id="lbStatus"></span></div>
+      <div class="r-lb-list" id="lbList"></div>
+    </div>
     <div class="result-actions">
       <button id="retryBtn" class="btn primary">🔄 再来一次</button>
-      <button id="exitBtn" class="btn">🎯 返回编辑器</button>
+      <button id="exitBtn" class="btn" hidden>🎯 返回编辑器</button>
+      <a class="btn" href="/">🏠 返回选谱</a>
     </div>
   </div>
 </div>
