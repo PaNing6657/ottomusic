@@ -17,6 +17,65 @@ const DEFAULT_KEYS = [
 ];
 const ARROW_UP_PATH = 'M12 3 L20 12 H15 V21 H9 V12 H4 Z';
 
+// ---------- 打击音效：Web Audio 合成，无需外部文件 ----------
+const SFX = {
+  ctx: null,
+  // 首次按键时解锁 AudioContext（浏览器自动播放策略）
+  ensure() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
+  },
+  // 通用短音：噪声打击层 + 音高层
+  play({ freq = 600, dur = 0.08, noise = true, type = 'triangle', vol = 0.5, slide = 0 }) {
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const t0 = ctx.currentTime;
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(vol, t0);
+    out.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    out.connect(ctx.destination);
+    // 音高层：短促敲击音
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t0 + dur);
+    osc.connect(out);
+    osc.start(t0); osc.stop(t0 + dur);
+    // 噪声层：增加"敲击"质感
+    if (noise) {
+      const len = Math.floor(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 2500;   // 只保留高频脆感
+      const nOut = ctx.createGain();
+      nOut.gain.setValueAtTime(vol * 0.7, t0);
+      nOut.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+      src.connect(hp); hp.connect(nOut); nOut.connect(ctx.destination);
+      src.start(t0);
+    }
+  },
+  hit(kind) {
+    // 三档判定不同音高：perfect 最高最亮
+    const conf = {
+      perfect: { freq: 1200, dur: 0.09, vol: 0.45, slide: -300 },
+      great: { freq: 900, dur: 0.08, vol: 0.38, slide: -200 },
+      good: { freq: 700, dur: 0.07, vol: 0.3, slide: -150 },
+    }[kind];
+    if (conf) this.play(conf);
+  },
+  miss() { this.play({ freq: 160, dur: 0.16, type: 'sawtooth', vol: 0.22, slide: -80, noise: false }); },
+  break_() { this.play({ freq: 320, dur: 0.2, type: 'square', vol: 0.25, slide: -240, noise: false }); },
+  holdTick() { this.play({ freq: 1500, dur: 0.04, vol: 0.2, noise: false, type: 'sine' }); },
+};
+
 // code → lane 映射（init 时按谱面键位动态构建）
 let LANE_KEYMAP = {};
 
@@ -145,6 +204,7 @@ function buildStage(keys) {
 els.startBtn.addEventListener('click', async () => {
   if (els.startBtn.disabled) return;
   els.startBtn.disabled = true;   // 防重入
+  SFX.ensure();   // 用户手势解锁音效
   els.overlay.classList.add('hidden');
   els.hud.classList.remove('hidden');
   els.stage.classList.remove('hidden');
@@ -203,7 +263,9 @@ function loop() {
       state.counts.miss++;
       state.combo = 0;
       els.combo.textContent = '0';
-      showJudge('MISS', 'miss');
+      showJudge('MISS', 'miss', n.lane);
+      SFX.miss();
+      shakeScreen();   // Miss 震屏反馈
       state.noteIdx++;
       removeNoteEl(n);
     } else break;
@@ -234,6 +296,7 @@ function loop() {
       h.completed = true;
       n._done = 'complete';
       addScore(SCORE.holdBonus);
+      SFX.holdTick();   // hold 完成轻响
       state.holds.delete(idx);
       removeNoteEl(n);
       continue;
@@ -290,28 +353,34 @@ function hitLane(lane) {
   if (!best) return;
   const { i, n, diff } = best;
   const ad = Math.abs(diff);
+  spawnParticles(lane);   // 命中粒子迸射
 
   if (n.type === 'hold') {
-    if (ad <= WIN.perfect) { judge('perfect'); }
-    else if (ad <= WIN.great) { judge('great'); }
-    else { judge('good'); }
+    if (ad <= WIN.perfect) { judge('perfect', lane); }
+    else if (ad <= WIN.great) { judge('great', lane); }
+    else { judge('good', lane); }
     n._done = 'hold';             // 开始命中：按住中（不移除，由 holds 循环管理）
     if (n._el) n._el.classList.add('hold-active');
     state.holds.set(i, { completed: false });
   } else {
-    if (ad <= WIN.perfect) { judge('perfect'); }
-    else if (ad <= WIN.great) { judge('great'); }
-    else { judge('good'); }
+    if (ad <= WIN.perfect) { judge('perfect', lane); }
+    else if (ad <= WIN.great) { judge('great', lane); }
+    else { judge('good', lane); }
     n._done = 'tap';              // 命中完成：立即消散移除
     removeNoteEl(n);
   }
 }
 
-function judge(kind) {
+function judge(kind, lane) {
   state.counts[kind]++;
   addScore(SCORE[kind]);
   bumpCombo(1);
-  showJudge({ perfect: 'PERFECT', great: 'GREAT', good: 'GOOD' }[kind], kind);
+  showJudge({ perfect: 'PERFECT', great: 'GREAT', good: 'GOOD' }[kind], kind, lane);
+  SFX.hit(kind);
+  // 判定线脉冲反馈
+  pulseJudgeLine(kind);
+  // 连击里程碑：50/100/... 加一圈扩散环
+  if (state.combo > 0 && state.combo % 50 === 0) comboBurst();
 }
 
 function addScore(v) {
@@ -336,20 +405,70 @@ function updateHUD() {
   els.acc.textContent = acc.toFixed(2) + '%';
 }
 
-function showJudge(text, kind) {
+function showJudge(text, kind, lane) {
   els.lastJudge.textContent = text;
   els.lastJudge.className = 'hud-judge ' + kind;
   els.lastJudge.classList.remove('show');
   void els.lastJudge.offsetWidth;
   els.lastJudge.classList.add('show');
-  // 命中特效
+  // 命中特效：定位到对应轨道中心（fxLayer 为 absolute 定位参照）
   const fx = document.createElement('div');
   fx.className = 'fx';
-  fx.style.setProperty('--lane-c', LANE_COLORS[lastHitLane]);
+  const l = lane !== undefined ? lane : lastHitLane;
+  fx.style.setProperty('--lane-c', LANE_COLORS[l]);
+  const laneRect = state.laneEls[l].getBoundingClientRect();
+  const layerRect = els.fxLayer.getBoundingClientRect();
+  fx.style.left = (laneRect.left + laneRect.width / 2 - layerRect.left) + 'px';
   els.fxLayer.appendChild(fx);
   setTimeout(() => fx.remove(), 500);
 }
 let lastHitLane = 0;
+
+// ---------- 打击感视觉反馈 ----------
+// 判定线脉冲：命中瞬间亮一下
+function pulseJudgeLine(kind) {
+  const line = els.judgeLine;
+  line.classList.remove('pulse', 'pulse-strong');
+  void line.offsetWidth;   // 重触发动画
+  line.classList.add(kind === 'perfect' ? 'pulse-strong' : 'pulse');
+}
+
+// Miss/Break 震屏
+function shakeScreen() {
+  document.body.classList.remove('shake');
+  void document.body.offsetWidth;
+  document.body.classList.add('shake');
+}
+
+// 连击里程碑：判定线全宽扩散环
+function comboBurst() {
+  const burst = document.createElement('div');
+  burst.className = 'combo-burst';
+  els.fxLayer.appendChild(burst);
+  setTimeout(() => burst.remove(), 700);
+}
+
+// 命中粒子：沿轨道色迸出
+function spawnParticles(lane) {
+  const laneEl = state.laneEls[lane];
+  const rect = laneEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = state.judgeY;
+  for (let i = 0; i < 6; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.setProperty('--lane-c', LANE_COLORS[lane]);
+    // 随机迸射方向（上半圆）
+    const ang = -Math.PI * Math.random();
+    const dist = 40 + Math.random() * 55;
+    p.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+    p.style.left = cx + 'px';
+    p.style.top = cy + 'px';
+    els.fxLayer.appendChild(p);
+    setTimeout(() => p.remove(), 480);
+  }
+}
 
 // ---------- 按键 ----------
 document.addEventListener('keydown', e => {
@@ -385,7 +504,9 @@ document.addEventListener('keyup', e => {
       state.holds.delete(idx);
       state.combo = 0;
       els.combo.textContent = '0';
-      showJudge('BREAK', 'miss');
+      showJudge('BREAK', 'miss', lane);
+      SFX.break_();
+      shakeScreen();
       removeNoteEl(n);
       break;   // 同轨道同时只有一个按住中的 hold
     }

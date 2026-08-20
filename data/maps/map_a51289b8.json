@@ -25,19 +25,37 @@
   ],
   "notes": [
     {
-      "time": 1.875,
+      "time": 1.125,
       "lane": 0,
-      "type": "hold",
-      "endTime": 4
+      "type": "tap"
     },
     {
-      "time": 5.875,
+      "time": 2.75,
       "lane": 0,
-      "type": "hold",
-      "endTime": 8.125
+      "type": "tap"
+    },
+    {
+      "time": 4.875,
+      "lane": 0,
+      "type": "tap"
+    },
+    {
+      "time": 7.375,
+      "lane": 0,
+      "type": "tap"
+    },
+    {
+      "time": 11.625,
+      "lane": 0,
+      "type": "tap"
+    },
+    {
+      "time": 15.25,
+      "lane": 0,
+      "type": "tap"
     }
   ],
   "duration": 143.24390022675738,
   "createdAt": "2026-08-20T14:31:57.783Z",
-  "updatedAt": "2026-08-20T14:35:08.300Z"
+  "updatedAt": "2026-08-20T14:36:47.937Z"
 }
