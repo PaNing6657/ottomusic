@@ -1,0 +1,30 @@
+{
+  "id": "map_011a8556",
+  "name": "undefined",
+  "audio": "8月20日.wav",
+  "bpm": 100.4,
+  "offset": 0,
+  "keyCount": 4,
+  "keys": [
+    [
+      "KeyW",
+      "ArrowUp"
+    ],
+    [
+      "KeyS",
+      "ArrowDown"
+    ],
+    [
+      "KeyA",
+      "ArrowLeft"
+    ],
+    [
+      "KeyD",
+      "ArrowRight"
+    ]
+  ],
+  "notes": [],
+  "duration": 143.24390022675738,
+  "createdAt": "2026-08-20T14:08:36.243Z",
+  "updatedAt": "2026-08-20T14:08:36.243Z"
+}

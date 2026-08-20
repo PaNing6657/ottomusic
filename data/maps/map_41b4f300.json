@@ -1,0 +1,164 @@
+{
+  "id": "map_41b4f300",
+  "name": "undefined",
+  "audio": "8月20日.wav",
+  "bpm": 120,
+  "offset": 0,
+  "keyCount": 4,
+  "keys": [
+    [
+      "KeyW",
+      "ArrowUp"
+    ],
+    [
+      "KeyS",
+      "ArrowDown"
+    ],
+    [
+      "KeyA",
+      "ArrowLeft"
+    ],
+    [
+      "KeyD",
+      "ArrowRight"
+    ]
+  ],
+  "notes": [
+    {
+      "time": 1,
+      "lane": 2,
+      "type": "hold",
+      "endTime": 3.375
+    },
+    {
+      "time": 4,
+      "lane": 2,
+      "type": "hold",
+      "endTime": 5.875
+    },
+    {
+      "time": 7.25,
+      "lane": 2,
+      "type": "hold",
+      "endTime": 9.375
+    },
+    {
+      "time": 9.75,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 10,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 10.125,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 10.25,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 10.5,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 10.625,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 10.75,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 11,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 11.125,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 11.25,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 11.5,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 11.875,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 12,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 12.25,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 12.375,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 12.75,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 13,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 13.125,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 13.25,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 13.5,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 13.625,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 13.75,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 14.125,
+      "lane": 2,
+      "type": "tap"
+    }
+  ],
+  "duration": 143.24390022675738,
+  "createdAt": "2026-08-20T14:15:58.699Z",
+  "updatedAt": "2026-08-20T14:18:15.080Z"
+}

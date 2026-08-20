@@ -1,0 +1,43 @@
+{
+  "id": "map_a51289b8",
+  "name": "未命名谱面",
+  "audio": "8月20日.wav",
+  "bpm": 120,
+  "offset": 0,
+  "keyCount": 4,
+  "keys": [
+    [
+      "KeyW",
+      "ArrowUp"
+    ],
+    [
+      "KeyS",
+      "ArrowDown"
+    ],
+    [
+      "KeyA",
+      "ArrowLeft"
+    ],
+    [
+      "KeyD",
+      "ArrowRight"
+    ]
+  ],
+  "notes": [
+    {
+      "time": 1.875,
+      "lane": 0,
+      "type": "hold",
+      "endTime": 4
+    },
+    {
+      "time": 5.875,
+      "lane": 0,
+      "type": "hold",
+      "endTime": 8.125
+    }
+  ],
+  "duration": 143.24390022675738,
+  "createdAt": "2026-08-20T14:31:57.783Z",
+  "updatedAt": "2026-08-20T14:35:08.300Z"
+}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>下落箭头 · NEON ARROWS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/game.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- 开始遮罩 -->
+<div id="startOverlay" class="overlay">
+  <div class="start-box">
+    <div class="neon-tag">RHYTHM GAME</div>
+    <h1 class="game-title">NEON <span>ARROWS</span></h1>
+    <p class="game-title-cn">下 落 箭 头 · 音 乐 游 戏</p>
+    <p id="mapInfo" class="map-info">加载中…</p>
+    <!-- 键位提示由 JS 按谱面配置动态生成 -->
+    <div id="keyHint" class="key-hint"></div>
+    <button id="startBtn" class="start-btn">▶ 点击开始</button>
+    <p class="back-link"><a href="/editor.html" id="backEditor">← 返回谱面编辑器</a></p>
+  </div>
+</div>
+
+<!-- 倒计时 -->
+<div id="countdown" class="countdown hidden">3</div>
+
+<!-- 暂停遮罩 -->
+<div id="pausePanel" class="overlay hidden">
+  <div class="start-box">
+    <h2 style="font-family:var(--font-display);letter-spacing:8px;color:var(--cyan);text-shadow:0 0 18px rgba(0,229,255,.6);margin-bottom:8px;">已暂停</h2>
+    <p class="map-info" style="margin-bottom:0;">按 Esc 继续游戏</p>
+  </div>
+</div>
+
+<!-- 计分板 -->
+<div id="hud" class="hud hidden">
+  <div class="hud-score"><span id="score">0</span><span class="unit">分</span></div>
+  <div class="hud-acc"><span id="acc">100.00%</span></div>
+  <div class="hud-combo"><span id="combo">0</span><span class="unit">连击</span></div>
+  <div class="hud-judge" id="lastJudge"></div>
+</div>
+
+<!-- 舞台（轨道由 JS 按谱面 keyCount 动态生成） -->
+<div id="stage" class="stage hidden">
+  <div id="judgeLine" class="judge-line">
+    <div class="judge-ticks"></div>
+  </div>
+  <div id="fxLayer" class="fx-layer"></div>
+</div>
+
+<!-- 结算 -->
+<div id="resultPanel" class="result hidden">
+  <div class="result-box">
+    <div class="rank" id="rank">S</div>
+    <h2 id="resultTitle">结算</h2>
+    <div class="result-stats">
+      <div class="stat"><span class="v" id="rScore">0</span><span class="l">分数</span></div>
+      <div class="stat"><span class="v" id="rAcc">0%</span><span class="l">准确率</span></div>
+      <div class="stat"><span class="v" id="rCombo">0</span><span class="l">最大连击</span></div>
+    </div>
+    <div class="judge-counts">
+      <span class="jc perfect">PERFECT <b id="cP">0</b></span>
+      <span class="jc great">GREAT <b id="cG">0</b></span>
+      <span class="jc good">GOOD <b id="cO">0</b></span>
+      <span class="jc miss">MISS <b id="cM">0</b></span>
+    </div>
+    <div class="result-actions">
+      <button id="retryBtn" class="btn primary">🔄 再来一次</button>
+      <button id="exitBtn" class="btn">🎯 返回编辑器</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/game.js"></script>
+</body>
+</html>

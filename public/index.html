@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON ARROWS · 下落式箭头音乐游戏</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cyan: #00e5ff; --pink: #ff2d95; --yellow: #ffc400; --green: #00ff9d;
+    --font-display: 'Orbitron', 'Segoe UI', sans-serif;
+    --font-mono: 'Share Tech Mono', Consolas, monospace;
+    --font-body: 'Rajdhani', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: grid; place-items: center;
+    background: #04050c;
+    color: #eaf0ff;
+    font-family: var(--font-body);
+    overflow: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(1100px 620px at 50% -18%, rgba(0,229,255,.14), transparent 60%),
+      radial-gradient(900px 700px at 96% 108%, rgba(255,45,149,.11), transparent 62%),
+      radial-gradient(900px 700px at 4% 108%, rgba(0,255,157,.07), transparent 62%),
+      linear-gradient(180deg, #04050c, #080a18 55%, #04050c);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .5;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px);
+  }
+  .grid-floor {
+    position: fixed; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(rgba(0,229,255,.05) 1px, transparent 1px) 0 0 / 100% 52px,
+      linear-gradient(90deg, rgba(0,229,255,.05) 1px, transparent 1px) 0 0 / 52px 100%;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 55%, #000 100%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 55%, #000 100%);
+  }
+  .wrap { position: relative; text-align: center; padding: 40px; z-index: 5; }
+  .neon-tag {
+    font-family: var(--font-mono); font-size: 13px; letter-spacing: 9px;
+    color: var(--cyan); text-shadow: 0 0 12px rgba(0,229,255,.9);
+    margin-bottom: 16px;
+    animation: tagGlow 3s ease-in-out infinite;
+  }
+  @keyframes tagGlow { 0%,100% { opacity: .8; } 50% { opacity: 1; } }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 74px; font-weight: 900; letter-spacing: 10px;
+    color: #eaf0ff;
+    animation: flicker 5s linear infinite;
+  }
+  .logo span {
+    background: linear-gradient(90deg, var(--cyan), var(--pink) 55%, var(--yellow));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 20px rgba(0,229,255,.5));
+  }
+  @keyframes flicker {
+    0%, 6%, 8%, 100% { opacity: 1; text-shadow: 0 0 10px #fff, 0 0 30px rgba(0,229,255,.8), 0 0 70px rgba(255,45,149,.45); }
+    7% { opacity: .3; }
+    40%, 42% { opacity: 1; }
+    41% { opacity: .55; }
+  }
+  .sub {
+    font-size: 16px; letter-spacing: 12px; color: #8b95c4;
+    margin: 14px 0 46px;
+  }
+  .cards { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
+  .card {
+    position: relative;
+    width: 300px; padding: 34px 26px 30px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(16,20,42,.9), rgba(8,10,22,.92));
+    border: 1px solid #232b52;
+    text-decoration: none; color: #eaf0ff;
+    transition: all .2s;
+    display: block;
+    overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: linear-gradient(90deg, var(--c1), var(--c2));
+    filter: drop-shadow(0 0 6px var(--c1));
+    opacity: .8;
+  }
+  .card:hover {
+    transform: translateY(-6px);
+    border-color: var(--c1);
+    box-shadow: 0 0 34px rgba(0,229,255,.22), 0 20px 50px rgba(0,0,0,.5);
+  }
+  .card .icon {
+    font-family: var(--font-display);
+    font-size: 42px; margin-bottom: 18px;
+    color: var(--c1);
+    text-shadow: 0 0 18px var(--c1);
+  }
+  .card h2 { font-family: var(--font-display); font-size: 20px; letter-spacing: 3px; margin-bottom: 10px; }
+  .card p { font-size: 14px; color: #8b95c4; line-height: 1.7; }
+  .card .cta {
+    display: inline-block; margin-top: 18px;
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 2px;
+    color: var(--c1);
+  }
+  .card:nth-child(1) { --c1: var(--cyan); --c2: #0091ff; }
+  .card:nth-child(2) { --c1: var(--pink); --c2: var(--violet, #8f6cff); }
+  .audio-info {
+    margin-top: 42px;
+    font-family: var(--font-mono); font-size: 13px; letter-spacing: 1px; color: #6f79a8;
+  }
+  .audio-info b { color: var(--yellow); text-shadow: 0 0 8px rgba(255,196,0,.5); }
+</style>
+</head>
+<body>
+<div class="grid-floor"></div>
+<div class="wrap">
+  <div class="neon-tag">RHYTHM GAME</div>
+  <div class="logo">NEON <span>ARROWS</span></div>
+  <div class="sub">下 落 式 箭 头 音 乐 游 戏</div>
+  <div class="cards">
+    <a class="card" href="/editor.html">
+      <div class="icon">MAP</div>
+      <h2>谱面编辑器</h2>
+      <p>为「8月20日.wav」制作谱面：波形对齐、网格吸附、四轨道放置音符，保存后即刻试玩。</p>
+      <span class="cta">ENTER EDITOR →</span>
+    </a>
+    <a class="card" href="/game.html">
+      <div class="icon">PLAY</div>
+      <h2>游戏试玩</h2>
+      <p>W / S / A / D 或方向键接住下落的霓虹箭头，Perfect / Great / Good 判定，冲刺最高评级。</p>
+      <span class="cta">START GAME →</span>
+    </a>
+  </div>
+  <div class="audio-info">AUDIO // <b>8月20日.wav</b> — 44.1kHz · 16bit · 立体声 · 约 2:23</div>
+</div>
+</body>
+</html>

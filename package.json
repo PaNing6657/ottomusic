@@ -1,0 +1,12 @@
+{
+  "name": "arrow-rhythm-game",
+  "version": "1.0.0",
+  "description": "下落式箭头音乐游戏 - 谱面编辑器 + 游戏端（Node.js 前后端）",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

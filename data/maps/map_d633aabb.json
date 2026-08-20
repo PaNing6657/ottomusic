@@ -1,0 +1,43 @@
+{
+  "id": "map_d633aabb",
+  "name": "undefined",
+  "audio": "8月20日.wav",
+  "bpm": 120,
+  "offset": 0,
+  "keyCount": 4,
+  "keys": [
+    [
+      "KeyW",
+      "ArrowUp"
+    ],
+    [
+      "KeyS",
+      "ArrowDown"
+    ],
+    [
+      "KeyA",
+      "ArrowLeft"
+    ],
+    [
+      "KeyD",
+      "ArrowRight"
+    ]
+  ],
+  "notes": [
+    {
+      "time": 18.125,
+      "lane": 3,
+      "type": "hold",
+      "endTime": 22
+    },
+    {
+      "time": 18.625,
+      "lane": 2,
+      "type": "hold",
+      "endTime": 18.725
+    }
+  ],
+  "duration": 143.24390022675738,
+  "createdAt": "2026-08-20T14:10:23.286Z",
+  "updatedAt": "2026-08-20T14:10:38.585Z"
+}

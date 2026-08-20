@@ -1,0 +1,30 @@
+{
+  "id": "map_b44a3ba5",
+  "name": "未命名谱面",
+  "audio": "8月20日.wav",
+  "bpm": 120,
+  "offset": 0,
+  "keyCount": 4,
+  "keys": [
+    [
+      "KeyW",
+      "ArrowUp"
+    ],
+    [
+      "KeyS",
+      "ArrowDown"
+    ],
+    [
+      "KeyA",
+      "ArrowLeft"
+    ],
+    [
+      "KeyD",
+      "ArrowRight"
+    ]
+  ],
+  "notes": [],
+  "duration": 143.24390022675738,
+  "createdAt": "2026-08-20T14:25:49.536Z",
+  "updatedAt": "2026-08-20T14:25:49.536Z"
+}
