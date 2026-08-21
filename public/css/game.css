@@ -147,6 +147,26 @@ body {
   display: flex; justify-content: center; align-items: center;
   gap: 8px 18px; flex-wrap: wrap;
 }
+
+/* 资源加载进度条：仅加载期间显示 */
+.load-wrap {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; margin-bottom: 16px;
+}
+.load-wrap[hidden] { display: none; }
+.load-bar {
+  width: 220px; height: 6px; border-radius: 3px;
+  background: #e3e6eb; overflow: hidden;
+}
+.load-fill {
+  width: 0%; height: 100%; border-radius: 3px;
+  background: var(--brand);
+  transition: width .25s ease-out;
+}
+.load-pct {
+  font-size: 12px; color: var(--text-2);
+  min-width: 34px; text-align: left; font-variant-numeric: tabular-nums;
+}
 .back-link { margin: 0; font-size: 13px; }
 .back-link a { color: var(--text-3); text-decoration: none; letter-spacing: 1px; }
 .back-link a:hover { color: var(--brand); }

@@ -162,6 +162,7 @@ const els = {
   calBlocks: $('calBlocks'), calFlash: $('calFlash'),
   calVal: $('calVal'), calCnt: $('calCnt'),
   calReset: $('calReset'), calCancel: $('calCancel'), calSave: $('calSave'),
+  loadWrap: $('loadWrap'), loadFill: $('loadFill'), loadPct: $('loadPct'),
 };
 
 const state = {
@@ -345,22 +346,42 @@ function buildStage(keys) {
 // ---------- 资源预缓存：完整缓冲音频 + 预解码立绘，避免游戏中卡顿 ----------
 let resourcesReady = Promise.resolve();
 let resourcesDone = true;
+let resImgDone = 0;
+
+// 加载进度聚合：音频缓冲占 60%，4 张立绘共占 40%
+function updateLoadProgress(forceDone) {
+  const a = state.audio;
+  let frac = forceDone ? 1 : 0;
+  if (!forceDone && a && a.duration > 0 && a.buffered && a.buffered.length) {
+    frac = Math.min(1, a.buffered.end(a.buffered.length - 1) / a.duration);
+  }
+  const pct = Math.min(100, Math.round((frac * 0.6 + (resImgDone / 4) * 0.4) * 100));
+  els.loadFill.style.width = pct + '%';
+  els.loadPct.textContent = pct + '%';
+}
+
 function preloadResources() {
   resourcesDone = false;
+  els.loadWrap.hidden = false;
   const jobs = [];
   // 音频：等到浏览器确认可不中断地播完（canplaythrough）
   const audio = state.audio;
   audio.preload = 'auto';
   jobs.push(new Promise(resolve => {
-    if (audio.readyState >= 3) return resolve();
-    audio.addEventListener('canplaythrough', resolve, { once: true });
-    audio.addEventListener('error', resolve, { once: true });   // 加载失败也不阻塞开始
+    const done = () => { updateLoadProgress(true); resolve(); };
+    if (audio.readyState >= 3) return done();
+    audio.addEventListener('canplaythrough', done, { once: true });
+    audio.addEventListener('error', done, { once: true });   // 加载失败也不阻塞开始
+    audio.addEventListener('progress', () => updateLoadProgress());
   }));
   // 立绘：提前解码，首次显示与受击切换不掉帧
   for (const img of [els.charL, els.charR, els.charHitL, els.charHitR]) {
-    jobs.push(img.decode().catch(() => {}));
+    jobs.push(img.decode().catch(() => {}).then(() => { resImgDone++; updateLoadProgress(); }));
   }
-  resourcesReady = Promise.all(jobs).then(() => { resourcesDone = true; });
+  resourcesReady = Promise.all(jobs).then(() => {
+    resourcesDone = true;
+    setTimeout(() => { els.loadWrap.hidden = true; }, 400);   // 满格稍作停留再隐藏
+  });
 }
 
 // ---------- 开始 ----------
