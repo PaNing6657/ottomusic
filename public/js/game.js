@@ -163,6 +163,7 @@ const els = {
   calVal: $('calVal'), calCnt: $('calCnt'),
   calReset: $('calReset'), calCancel: $('calCancel'), calSave: $('calSave'),
   loadWrap: $('loadWrap'), loadFill: $('loadFill'), loadPct: $('loadPct'),
+  loadRetry: $('loadRetry'),
 };
 
 const state = {
@@ -267,6 +268,13 @@ function applyKeymap(keys) {
     `<div class="key-group"><div class="kg-label r">${P_RIGHT}</div><div class="kg-keys">${keys.map((_, i) => i >= state.leftCount ? item(i) : '').join('')}</div></div>`;
 }
 
+// 带超时的 fetch：超时或网络错误都走 catch（由调用方决定失败表现）
+function fetchWithTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
 // ---------- 初始化 ----------
 async function init() {
   state.userOffset = loadUserOffset();   // 开局读取本机校准值
@@ -278,7 +286,15 @@ async function init() {
     els.backEditor.href = '/editor.html';
     return;
   }
-  const res = await fetch(`/api/maps/${id}`);
+  let res;
+  try {
+    res = await fetchWithTimeout(`/api/maps/${id}`, 15000);
+  } catch {
+    els.mapInfo.textContent = '谱面加载失败，请刷新重试';
+    els.startBtn.disabled = true;
+    els.backEditor.href = '/editor.html';
+    return;
+  }
   if (!res.ok) {
     els.mapInfo.textContent = '谱面加载失败';
     els.startBtn.disabled = true;
@@ -302,7 +318,9 @@ async function init() {
   buildStage(keys);
   applyKeymap(keys);
 
-  const info = await (await fetch('/api/audio/info')).json();
+  // 音频时长仅用于展示密度，失败不拦开始（真正的音频加载在预缓存里严格把关）
+  let info = { duration: 0 };
+  try { info = await (await fetchWithTimeout('/api/audio/info', 10000)).json(); } catch { /* 忽略 */ }
   const density = state.map.notes.length / Math.max(1, info.duration);
   els.mapInfo.textContent =
     `「${state.map.name}」 · ${state.map.bpm} BPM · ${state.keyCount}K · ${state.map.notes.length} 个音符 · 密度 ${density.toFixed(1)}/秒`;
@@ -343,9 +361,10 @@ function buildStage(keys) {
   els.stage.appendChild(tagR);
 }
 
-// ---------- 资源预缓存：完整缓冲音频 + 预解码立绘，避免游戏中卡顿 ----------
+// ---------- 资源预缓存：必须完整加载（音频缓冲 + 立绘解码）后才能开始，失败不放行 ----------
 let resourcesReady = Promise.resolve();
-let resourcesDone = true;
+let resourcesDone = true;     // 完整加载成功
+let resourcesFailed = false;  // 加载失败（含停滞超时）
 let resImgDone = 0;
 
 // 加载进度聚合：音频缓冲占 60%，4 张立绘共占 40%
@@ -360,29 +379,68 @@ function updateLoadProgress(forceDone) {
   els.loadPct.textContent = pct + '%';
 }
 
+// 加载失败：禁用开始按钮，显示重试入口
+function failResources() {
+  if (resourcesDone || resourcesFailed) return;
+  resourcesFailed = true;
+  els.loadFill.classList.add('fail');
+  els.loadPct.textContent = '加载失败';
+  els.loadRetry.classList.remove('hidden');
+  els.startBtn.disabled = true;
+  els.startBtn.textContent = '加载失败';
+  resourcesReady = Promise.reject(new Error('resource load failed'));
+  resourcesReady.catch(() => {});   // 静默处理，避免未捕获拒绝告警
+}
+
+const AUDIO_STALL_MS = 15000;   // 音频连续无进展阈值
+const IMG_TIMEOUT_MS = 20000;   // 单张立绘解码上限
+
 function preloadResources() {
   resourcesDone = false;
+  resourcesFailed = false;
+  resImgDone = 0;
   els.loadWrap.hidden = false;
+  els.loadFill.classList.remove('fail');
+  els.loadFill.style.width = '0%';
+  els.loadPct.textContent = '0%';
+  els.loadRetry.classList.add('hidden');
+  els.startBtn.disabled = false;
+  els.startBtn.textContent = '▶ 点击开始';
+
   const jobs = [];
-  // 音频：等到浏览器确认可不中断地播完（canplaythrough）
+  // 音频：等到浏览器确认可不中断地播完；报错或停滞（15s 无进展）即失败
   const audio = state.audio;
   audio.preload = 'auto';
-  jobs.push(new Promise(resolve => {
-    const done = () => { updateLoadProgress(true); resolve(); };
-    if (audio.readyState >= 3) return done();
-    audio.addEventListener('canplaythrough', done, { once: true });
-    audio.addEventListener('error', done, { once: true });   // 加载失败也不阻塞开始
-    audio.addEventListener('progress', () => updateLoadProgress());
+  jobs.push(new Promise((resolve, reject) => {
+    let settled = false, stall = 0;
+    const ok = () => { if (settled) return; settled = true; clearTimeout(stall); updateLoadProgress(true); resolve(); };
+    const bad = () => { if (settled) return; settled = true; clearTimeout(stall); reject(new Error('audio load failed')); };
+    const arm = () => { clearTimeout(stall); stall = setTimeout(bad, AUDIO_STALL_MS); };
+    if (audio.readyState >= 3) return ok();
+    audio.addEventListener('canplaythrough', ok, { once: true });
+    audio.addEventListener('error', bad, { once: true });
+    audio.addEventListener('progress', () => { updateLoadProgress(); arm(); });
+    arm();
   }));
-  // 立绘：提前解码，首次显示与受击切换不掉帧
+  // 立绘：提前解码；解码失败或超时即失败
   for (const img of [els.charL, els.charR, els.charHitL, els.charHitR]) {
-    jobs.push(img.decode().catch(() => {}).then(() => { resImgDone++; updateLoadProgress(); }));
+    jobs.push(Promise.race([
+      img.decode().catch(() => { throw new Error('image decode failed'); }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('image load timeout')), IMG_TIMEOUT_MS)),
+    ]).then(() => { resImgDone++; updateLoadProgress(); }));
   }
   resourcesReady = Promise.all(jobs).then(() => {
     resourcesDone = true;
-    setTimeout(() => { els.loadWrap.hidden = true; }, 400);   // 满格稍作停留再隐藏
+    setTimeout(() => { if (!resourcesFailed) els.loadWrap.hidden = true; }, 400);
   });
+  resourcesReady.catch(() => failResources());
 }
+
+// 重试：重置音频加载流程后重新预缓存
+els.loadRetry.addEventListener('click', () => {
+  state.audio.load();
+  preloadResources();
+});
 
 // ---------- 开始 ----------
 els.startBtn.addEventListener('click', async () => {
@@ -392,10 +450,14 @@ els.startBtn.addEventListener('click', async () => {
   // 借点击手势进入全屏；不支持或被浏览器拒绝时静默继续
   try { await document.documentElement.requestFullscreen(); }
   catch { document.documentElement.webkitRequestFullscreen?.(); }
-  // 资源未缓存完则先等完（按钮提示加载中），保证游戏全程不因加载卡顿
+  // 资源必须完整加载：未完成则等待；失败不放行（failResources 已禁用按钮并给出重试）
   if (!resourcesDone) {
     els.startBtn.textContent = '加载中…';
-    await resourcesReady;
+    try {
+      await resourcesReady;
+    } catch {
+      return;
+    }
     els.startBtn.textContent = '▶ 点击开始';
   }
   els.devBtn.classList.add('hidden');   // 游戏开始后隐藏调试入口

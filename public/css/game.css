@@ -167,6 +167,14 @@ body {
   font-size: 12px; color: var(--text-2);
   min-width: 34px; text-align: left; font-variant-numeric: tabular-nums;
 }
+/* 失败态：进度条标红 + 重试按钮 */
+.load-fill.fail { background: #e05252; transition: none; }
+.load-retry {
+  font-size: 12px; padding: 4px 12px;
+  border-radius: 6px; border: 1px solid var(--border);
+  background: #fff; color: var(--text-2); cursor: pointer;
+}
+.load-retry:hover { color: var(--brand); border-color: var(--brand); }
 .back-link { margin: 0; font-size: 13px; }
 .back-link a { color: var(--text-3); text-decoration: none; letter-spacing: 1px; }
 .back-link a:hover { color: var(--brand); }
