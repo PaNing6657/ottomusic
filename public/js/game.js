@@ -158,6 +158,10 @@ const els = {
   charL: $('charL'), charR: $('charR'),
   charHitL: $('charHitL'), charHitR: $('charHitR'),
   pauseBtn: $('pauseBtn'),
+  calBtn: $('calBtn'), calModal: $('calModal'), calPad: $('calPad'),
+  calBlocks: $('calBlocks'), calFlash: $('calFlash'),
+  calVal: $('calVal'), calCnt: $('calCnt'),
+  calReset: $('calReset'), calCancel: $('calCancel'), calSave: $('calSave'),
 };
 
 const state = {
@@ -181,6 +185,7 @@ const state = {
   prerollStart: 0,      // 预滚动起点（performance.now）
   hp: { left: HP_MAX, right: HP_MAX },   // 双方血量
   leftCount: 2,          // 左方（notch）轨道数
+  userOffset: 0,         // 本机音频延迟补偿（秒，节奏校准所得；正值 = 声音到得晚）
 };
 
 // 键位显示名
@@ -213,6 +218,16 @@ function normalizeKeys(keys, count) {
 
 // ---------- 自定义键位（按轨道数存本机） ----------
 const kbStoreKey = () => `ottohub_gameKeys_${state.keyCount}`;
+
+// ---------- 本机音频延迟补偿（节奏校准所得，毫秒存本机） ----------
+const USER_OFFSET_KEY = 'ottohub_userOffset';
+function loadUserOffset() {
+  try {
+    const v = parseFloat(localStorage.getItem(USER_OFFSET_KEY));
+    if (Number.isFinite(v)) return Math.max(-500, Math.min(500, v)) / 1000;   // 钳制 ±500ms
+  } catch { /* localStorage 不可用 */ }
+  return 0;
+}
 
 // 读取本机自定义主键：返回 [code|null, ...]
 function loadCustomKeys() {
@@ -253,6 +268,7 @@ function applyKeymap(keys) {
 
 // ---------- 初始化 ----------
 async function init() {
+  state.userOffset = loadUserOffset();   // 开局读取本机校准值
   const params = new URLSearchParams(location.search);
   const id = params.get('id');
   if (!id) {
@@ -273,6 +289,7 @@ async function init() {
   state.audio = new Audio('/api/audio');
   // 音频结束后延迟结算：等最后几个音符走完 miss 判定
   state.audio.addEventListener('ended', () => setTimeout(finish, 600));
+  preloadResources();   // 开局即后台缓存音频与立绘，点开始时通常已就绪
   // 谱面结束时间：最后一个音符（含 hold 尾部）走完判定窗口即结束，不必等音乐放完
   state.endTime = state.map.notes.reduce((mx, n) => Math.max(mx, n.time + (n.duration || 0)), 0)
     + (state.map.offset || 0) + WIN.good + 0.3;
@@ -325,6 +342,27 @@ function buildStage(keys) {
   els.stage.appendChild(tagR);
 }
 
+// ---------- 资源预缓存：完整缓冲音频 + 预解码立绘，避免游戏中卡顿 ----------
+let resourcesReady = Promise.resolve();
+let resourcesDone = true;
+function preloadResources() {
+  resourcesDone = false;
+  const jobs = [];
+  // 音频：等到浏览器确认可不中断地播完（canplaythrough）
+  const audio = state.audio;
+  audio.preload = 'auto';
+  jobs.push(new Promise(resolve => {
+    if (audio.readyState >= 3) return resolve();
+    audio.addEventListener('canplaythrough', resolve, { once: true });
+    audio.addEventListener('error', resolve, { once: true });   // 加载失败也不阻塞开始
+  }));
+  // 立绘：提前解码，首次显示与受击切换不掉帧
+  for (const img of [els.charL, els.charR, els.charHitL, els.charHitR]) {
+    jobs.push(img.decode().catch(() => {}));
+  }
+  resourcesReady = Promise.all(jobs).then(() => { resourcesDone = true; });
+}
+
 // ---------- 开始 ----------
 els.startBtn.addEventListener('click', async () => {
   if (els.startBtn.disabled) return;
@@ -333,6 +371,12 @@ els.startBtn.addEventListener('click', async () => {
   // 借点击手势进入全屏；不支持或被浏览器拒绝时静默继续
   try { await document.documentElement.requestFullscreen(); }
   catch { document.documentElement.webkitRequestFullscreen?.(); }
+  // 资源未缓存完则先等完（按钮提示加载中），保证游戏全程不因加载卡顿
+  if (!resourcesDone) {
+    els.startBtn.textContent = '加载中…';
+    await resourcesReady;
+    els.startBtn.textContent = '▶ 点击开始';
+  }
   els.devBtn.classList.add('hidden');   // 游戏开始后隐藏调试入口
   // 触屏设备显示暂停按钮（桌面用 Esc）
   if (matchMedia('(pointer: coarse)').matches) els.pauseBtn.classList.remove('hidden');
@@ -505,6 +549,161 @@ kbBtns.reset.addEventListener('click', () => {
   renderKbRows();
 });
 
+// ---------- 节奏校准弹窗：下落块落到判定线时点按，测本机延迟 ----------
+const CAL_SPB = 0.6;        // 100 BPM，每拍 0.6s（对齐窗口 ±300ms，容得下大延迟）
+const CAL_KEEP = 12;        // 参与平均的最近点按数
+const CAL_APPROACH = 1.2;   // 方块从出现到判定线的下落时长（秒）
+const cal = { open: false, timer: 0, raf: 0, t0: 0, nextT: 0, beatNo: 0, samples: [], lastTap: 0, blocks: [] };
+
+// 节拍声：每 4 拍一个重音，帮助跟住拍点
+function calTickSound(t, accent) {
+  const ctx = SFX.ctx;
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = accent ? 1200 : 800;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(accent ? 0.5 : 0.32, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+  osc.connect(g); g.connect(SFX.comp);
+  osc.start(t); osc.stop(t + 0.1);
+}
+
+// 前瞻调度：以音频时钟为准排节拍（比 setInterval 精确），每拍生成一个下落块
+// 前瞻量 = 下落时长：保证方块总是在开始下落前就创建好，从顶部完整落下
+function calSchedule() {
+  const ctx = SFX.ctx;
+  while (cal.nextT < ctx.currentTime + CAL_APPROACH) {
+    const accent = cal.beatNo % 4 === 0;
+    calTickSound(cal.nextT, accent);
+    // 下落块：颜色轮换轨道色，恰在节拍时刻抵达判定线
+    const c = LANE_COLORS[cal.beatNo % LANE_COLORS.length];
+    const el = document.createElement('div');
+    el.className = 'cal-block';
+    el.style.background = `linear-gradient(165deg, color-mix(in srgb, ${c} 42%, #fff), ${c})`;
+    els.calBlocks.appendChild(el);
+    cal.blocks.push({ t: cal.nextT, el, hit: false });
+    cal.nextT += CAL_SPB;
+    cal.beatNo++;
+  }
+}
+
+// 下落块位置：rAF 按音频时钟推进，p=1 恰在线上（与节拍声同刻）
+function calFrame() {
+  if (!cal.open) return;
+  cal.raf = requestAnimationFrame(calFrame);
+  const t = SFX.ctx.currentTime;
+  const lineCenter = els.calPad.clientHeight - 28;
+  for (let i = cal.blocks.length - 1; i >= 0; i--) {
+    const b = cal.blocks[i];
+    const p = (t - (b.t - CAL_APPROACH)) / CAL_APPROACH;
+    if (p < 0) continue;   // 还没到出现时间
+    if (p > 1.35 || (b.hit && p > 1.3)) {   // 漏掉飘出 / 爆散动画播完：回收
+      b.el.remove(); cal.blocks.splice(i, 1);
+      continue;
+    }
+    b.el.style.top = (p * (lineCenter + 27) - 50) + 'px';   // p=0 藏于顶边外，p=1 中心恰在判定线
+    // 过线未击：继续下落并淡出
+    b.el.style.opacity = p > 1.1 ? String(Math.max(0, 1 - (p - 1.1) / 0.25)) : '1';
+  }
+}
+
+function calRender() {
+  if (!cal.samples.length) {
+    els.calVal.textContent = '跟拍中…';
+    els.calCnt.textContent = '';
+    return;
+  }
+  const avg = cal.samples.reduce((a, b) => a + b, 0) / cal.samples.length;
+  const ms = Math.round(avg * 1000);
+  els.calVal.textContent = (ms >= 0 ? '+' : '') + ms + ' ms';
+  els.calCnt.textContent = `已采 ${cal.samples.length} 次（正值 = 点得晚，保存后判定按此提前补偿）`;
+}
+
+function calStart() {
+  const ctx = SFX.ensure();
+  if (!ctx) { els.calVal.textContent = '浏览器不支持音频，无法校准'; return; }
+  cal.open = true;
+  cal.samples = [];
+  cal.beatNo = 0;
+  cal.lastTap = 0;
+  cal.t0 = cal.nextT = ctx.currentTime + CAL_APPROACH + 0.1;   // 首拍留足下落时长，方块才能从顶部完整落下
+  cal.timer = setInterval(calSchedule, 50);
+  cal.raf = requestAnimationFrame(calFrame);
+  calRender();
+}
+
+function calStop() {
+  cal.open = false;
+  clearInterval(cal.timer);
+  cancelAnimationFrame(cal.raf);
+  cal.blocks.forEach(b => b.el.remove());
+  cal.blocks = [];
+}
+
+// 一次点按：对齐最近一拍，偏差计入样本，并爆散对应方块
+function calTap() {
+  if (!cal.open) return;
+  const ctx = SFX.ctx;
+  const t = ctx.currentTime;
+  if (t - cal.lastTap < 0.12) return;   // 抖动去重
+  cal.lastTap = t;
+  if (t < cal.t0 - 0.15) return;        // 起拍前的乱点不计
+  const k = Math.round((t - cal.t0) / CAL_SPB);
+  const delta = t - (cal.t0 + k * CAL_SPB);
+  cal.samples.push(delta);
+  if (cal.samples.length > CAL_KEEP) cal.samples.shift();
+  // 命中视觉：该拍的方块爆散（尚未出现的忽略）
+  const bt = cal.t0 + k * CAL_SPB;
+  for (const b of cal.blocks) {
+    if (!b.hit && Math.abs(b.t - bt) < 0.01 && t >= b.t - CAL_APPROACH) {
+      b.hit = true;
+      b.el.classList.add('hit');
+      break;
+    }
+  }
+  // 单次偏差闪现：±45ms 内标绿（接近完美）
+  const ms = Math.round(delta * 1000);
+  els.calFlash.textContent = (ms >= 0 ? '+' : '') + ms + ' ms';
+  els.calFlash.style.color = Math.abs(ms) <= 45 ? 'var(--brand)' : 'var(--text-2)';
+  els.calFlash.classList.remove('show');
+  void els.calFlash.offsetWidth;
+  els.calFlash.classList.add('show');
+  calRender();
+}
+
+els.calBtn.addEventListener('click', () => {
+  els.calModal.classList.remove('hidden');
+  calStart();
+});
+els.calPad.addEventListener('pointerdown', e => { e.preventDefault(); calTap(); });
+els.calSave.addEventListener('click', () => {
+  // 样本太少不保存（视为取消），避免误存离谱值
+  if (cal.samples.length >= 4) {
+    const avg = cal.samples.reduce((a, b) => a + b, 0) / cal.samples.length;
+    const ms = Math.round(avg * 1000);
+    state.userOffset = ms / 1000;
+    try { localStorage.setItem(USER_OFFSET_KEY, String(ms)); } catch { /* 忽略 */ }
+  }
+  calStop();
+  els.calModal.classList.add('hidden');
+});
+els.calCancel.addEventListener('click', () => { calStop(); els.calModal.classList.add('hidden'); });
+els.calReset.addEventListener('click', () => {
+  state.userOffset = 0;
+  try { localStorage.removeItem(USER_OFFSET_KEY); } catch { /* 忽略 */ }
+  calStop();
+  els.calModal.classList.add('hidden');
+});
+// 弹窗打开时按任意键等同点按（Esc 关闭）
+document.addEventListener('keydown', e => {
+  if (!cal.open || e.repeat) return;
+  if (e.code === 'Escape') { els.calCancel.click(); return; }
+  const tag = e.target && e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  e.preventDefault();
+  calTap();
+});
+
 // ---------- 对战血量：哪边按错扣哪边，一方归零直接结算 ----------
 // 轨道归属：前半归左方 notch，后半归右方 古阵兴
 function sideOf(lane) { return lane < state.leftCount ? 'left' : 'right'; }
@@ -558,6 +757,7 @@ function loop() {
   requestAnimationFrame(loop);
   if (state.paused) return;   // 暂停：音频已停，时间冻结
   const t = gameTime();
+  const jt = t - state.userOffset;   // 补偿后时钟：漏接窗口与命中判定同坐标系
   const notes = state.map.notes;
   const off = state.map.offset || 0;
 
@@ -569,7 +769,7 @@ function loop() {
     const n = notes[state.noteIdx];
     const nt = n.time + off;
     if (n._done) { state.noteIdx++; continue; }
-    if (nt - t < -WIN.good) {
+    if (nt - jt < -WIN.good) {
       n._done = 'miss';
       lastHitLane = n.lane;
       state.counts.miss++;
@@ -656,7 +856,8 @@ function makeNoteEl(n) {
 function hitLane(lane) {
   if (!state.running) return;
   const notes = state.map.notes;
-  const t = gameTime();
+  // 判定用补偿后时钟：本机声音到得晚（userOffset>0），玩家按键整体偏晚，往前扣回
+  const t = gameTime() - state.userOffset;
   let best = null;
   for (let i = state.noteIdx; i < notes.length; i++) {
     const n = notes[i];
@@ -807,7 +1008,7 @@ function releaseLane(lane) {
   for (const [idx, h] of state.holds) {
     const n = state.map.notes[idx];
     const endT = n.endTime + (state.map.offset || 0);
-    if (n.lane === lane && !h.completed && gameTime() < endT - 0.06) {
+    if (n.lane === lane && !h.completed && gameTime() - state.userOffset < endT - 0.06) {
       h.completed = true;
       n._done = 'broken';
       state.holds.delete(idx);

@@ -31,6 +31,7 @@
     <button id="startBtn" class="start-btn">▶ 点击开始</button>
     <div class="start-sub">
       <button id="keybindBtn" class="keybind-btn" title="自定义键位">⌨ 键位设置</button>
+      <button id="calBtn" class="keybind-btn" title="校准音频延迟（蓝牙耳机等）">♪ 节奏校准</button>
       <p class="back-link" hidden><a href="/editor.html" id="backEditor">← 返回谱面编辑器</a></p>
     </div>
     <!-- 开发者调试入口：点击输入暗号可开启自动弹 -->
@@ -48,6 +49,26 @@
       <button id="kbReset" class="btn">恢复默认</button>
       <button id="kbCancel" class="btn">取消</button>
       <button id="kbSave" class="btn primary">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 节奏校准弹窗：跟随节拍点按，测出本机延迟并在判定中自动补偿 -->
+<div id="calModal" class="dev-modal hidden">
+  <div class="dev-dialog cal-dialog">
+    <div class="dev-title">节奏校准</div>
+    <p class="dev-desc">方块落到判定线时点击下方区域（或按任意键），连点十几拍；测得的延迟会在游戏中自动补偿，适合蓝牙耳机等有音频延迟的设备</p>
+    <div id="calPad" class="cal-pad">
+      <div id="calBlocks" class="cal-blocks"></div>
+      <div class="cal-line"></div>
+      <div id="calFlash" class="cal-flash"></div>
+    </div>
+    <div class="cal-val" id="calVal">点我开始</div>
+    <div class="cal-cnt" id="calCnt"></div>
+    <div class="dev-actions">
+      <button id="calReset" class="btn">恢复默认</button>
+      <button id="calCancel" class="btn">取消</button>
+      <button id="calSave" class="btn primary">保存</button>
     </div>
   </div>
 </div>

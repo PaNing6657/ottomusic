@@ -322,6 +322,55 @@ body {
 .dev-modal .btn.primary { background: var(--brand); border-color: var(--brand); color: #063a39; font-weight: 700; }
 .dev-modal .btn.primary:hover { opacity: .88; color: #063a39; }
 
+/* ---------- 节奏校准（下落块） ---------- */
+.cal-dialog { width: 360px; }
+.cal-pad {
+  position: relative; height: 210px; margin-bottom: 10px;
+  border-radius: 10px; border: 1px solid var(--border);
+  background: linear-gradient(180deg, #eef1f5, #e2e7ee);
+  overflow: hidden; cursor: pointer;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  transition: border-color .15s;
+}
+.cal-pad:hover { border-color: var(--brand); }
+/* 下落块 */
+.cal-blocks { position: absolute; inset: 0; }
+.cal-block {
+  position: absolute; left: 50%; top: -60px;
+  width: 46px; height: 46px; margin-left: -23px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.92);
+  box-shadow: 0 4px 12px rgba(28,35,51,.25);
+}
+/* 命中爆散（JS 加 hit 类） */
+.cal-block.hit { animation: calHit .3s ease-out forwards; }
+@keyframes calHit {
+  0% { transform: scale(1); opacity: 1; filter: brightness(1.8); }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+/* 判定线：方块中心到达此线时点击 */
+.cal-line {
+  position: absolute; left: 10px; right: 10px; bottom: 26px; height: 4px;
+  border-radius: 2px; background: var(--brand);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--brand) 70%, transparent);
+}
+.cal-line::before, .cal-line::after {
+  content: ""; position: absolute; top: -6px;
+  border: 8px solid transparent; border-top-color: var(--brand);
+}
+.cal-line::before { left: -7px; }
+.cal-line::after { right: -7px; transform: scaleX(-1); }
+/* 单次点按偏差闪现 */
+.cal-flash {
+  position: absolute; left: 50%; bottom: 42px; transform: translateX(-50%);
+  font-size: 15px; font-weight: 700; color: var(--text-2);
+  opacity: 0; pointer-events: none; font-variant-numeric: tabular-nums;
+}
+.cal-flash.show { animation: calFlash .55s ease-out; }
+@keyframes calFlash { 0% { opacity: 1; } 100% { opacity: 0; } }
+.cal-val { font-size: 24px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.cal-cnt { font-size: 12px; color: var(--text-2); padding: 0 12px; line-height: 1.5; }
+
 /* AUTO 角标：开启自动弹后常驻显示于 HUD */
 .auto-badge {
   position: fixed; top: 18px; left: 50%; transform: translateX(-50%);

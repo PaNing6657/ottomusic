@@ -1,0 +1,77 @@
+{
+  "id": "map_f38e4e62",
+  "name": "未命名谱面",
+  "audio": "8月20日.wav",
+  "bpm": 120,
+  "offset": 0,
+  "keyCount": 4,
+  "keys": [
+    [
+      "KeyW",
+      "ArrowUp"
+    ],
+    [
+      "KeyS",
+      "ArrowDown"
+    ],
+    [
+      "KeyA",
+      "ArrowLeft"
+    ],
+    [
+      "KeyD",
+      "ArrowRight"
+    ]
+  ],
+  "notes": [
+    {
+      "time": 2,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 3.875,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 6,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 8,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 9.875,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 12,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 14,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 19.125,
+      "lane": 2,
+      "type": "tap"
+    },
+    {
+      "time": 19.25,
+      "lane": 2,
+      "type": "tap"
+    }
+  ],
+  "duration": 143.24390022675738,
+  "owner": null,
+  "createdAt": "2026-08-21T04:56:03.398Z",
+  "updatedAt": "2026-08-21T04:56:52.594Z"
+}
