@@ -25,13 +25,14 @@
   <div class="start-box">
     <div class="neon-tag">VS RHYTHM</div>
     <h1 class="game-title">NOTCH <span>大战</span> 古镇兴</h1>
-    <p class="game-title-cn">音 乐 对 战 · 节 奏 制 胜</p>
     <p id="mapInfo" class="map-info">加载中…</p>
     <!-- 键位提示由 JS 按谱面配置动态生成 -->
     <div id="keyHint" class="key-hint"></div>
     <button id="startBtn" class="start-btn">▶ 点击开始</button>
-    <button id="keybindBtn" class="keybind-btn" title="自定义键位">⌨ 键位设置</button>
-    <p class="back-link" hidden><a href="/editor.html" id="backEditor">← 返回谱面编辑器</a></p>
+    <div class="start-sub">
+      <button id="keybindBtn" class="keybind-btn" title="自定义键位">⌨ 键位设置</button>
+      <p class="back-link" hidden><a href="/editor.html" id="backEditor">← 返回谱面编辑器</a></p>
+    </div>
     <!-- 开发者调试入口：点击输入暗号可开启自动弹 -->
     <button id="devBtn" class="dev-btn" title="开发者工具">⭘ 调试</button>
   </div>
@@ -80,7 +81,7 @@
 <!-- 暂停遮罩 -->
 <div id="pausePanel" class="overlay hidden">
   <div class="start-box">
-    <h2 style="font-family:var(--font-display);letter-spacing:8px;color:var(--cyan);text-shadow:0 0 18px rgba(0,229,255,.6);margin-bottom:8px;">已暂停</h2>
+    <h2 style="font-size:22px;font-weight:700;letter-spacing:8px;color:#1c2333;margin-bottom:8px;">已暂停</h2>
     <p class="map-info" style="margin-bottom:0;">按 Esc 继续游戏</p>
   </div>
 </div>
@@ -147,13 +148,13 @@
     </div>
     <!-- 官方排行榜（隐藏，成绩仍静默上传） -->
     <div class="r-leaderboard" hidden>
-      <div class="r-lb-title">🏆 官方排行榜 <span id="lbStatus"></span></div>
+      <div class="r-lb-title">官方排行榜 <span id="lbStatus"></span></div>
       <div class="r-lb-list" id="lbList"></div>
     </div>
     <div class="result-actions">
-      <button id="retryBtn" class="btn primary">🔄 再来一次</button>
-      <button id="exitBtn" class="btn" hidden>🎯 返回编辑器</button>
-      <a class="btn" href="/">🏠 返回选谱</a>
+      <button id="retryBtn" class="btn primary">再来一次</button>
+      <button id="exitBtn" class="btn" hidden>返回编辑器</button>
+      <a class="btn" href="/">返回选谱</a>
     </div>
   </div>
 </div>

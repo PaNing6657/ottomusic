@@ -359,7 +359,7 @@ app.get('/api/scores/:mapId', async (req, res) => {
 // ---------- 静态前端 ----------
 app.use(express.static(PUBLIC_DIR));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 9999;
 app.listen(PORT, () => {
   console.log(`🎵 音乐游戏服务已启动: http://localhost:${PORT}`);
   console.log(`   音频: ${AUDIO_NAME}  (${AUDIO_FILE})`);

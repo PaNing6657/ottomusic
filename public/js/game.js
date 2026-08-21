@@ -23,19 +23,82 @@ const DEFAULT_KEYS = [
 ];
 const ARROW_UP_PATH = 'M12 3 L20 12 H15 V21 H9 V12 H4 Z';
 
-// ---------- 打击音效：Web Audio 合成，无需外部文件 ----------
+// ---------- 打击音效：Web Audio 合成"击碎"质感，无需外部文件 ----------
 const SFX = {
-  ctx: null,
+  ctx: null, comp: null,
   // 首次按键时解锁 AudioContext（浏览器自动播放策略）
   ensure() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) this.ctx = new AC();
+      if (AC) {
+        this.ctx = new AC();
+        // 主压缩器：多层叠加防削波，并让碎裂更有冲击力
+        this.comp = this.ctx.createDynamicsCompressor();
+        this.comp.threshold.value = -18; this.comp.knee.value = 20;
+        this.comp.ratio.value = 6; this.comp.attack.value = 0.002;
+        this.comp.release.value = 0.12;
+        this.comp.connect(this.ctx.destination);
+      }
     }
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
     return this.ctx;
   },
-  // 通用短音：噪声打击层 + 音高层
+  // 共享白噪声源（配合随机起点/速率，每次碎裂波形都不同）
+  _noise: null,
+  noiseBuf(ctx) {
+    if (!this._noise) {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.5 | 0, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      this._noise = buf;
+    }
+    return this._noise;
+  },
+  // 冲击体：低频下坠，给碎裂提供"分量"
+  thump(t0, vol) {
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(210, t0);
+    osc.frequency.exponentialRampToValueAtTime(70, t0 + 0.1);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.1);
+    osc.connect(g); g.connect(this.comp);
+    osc.start(t0); osc.stop(t0 + 0.1);
+  },
+  // 碎裂主体：带通噪声爆裂，中心频率与波形取样点随机微调
+  crack(t0, vol, freq) {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuf(ctx);
+    src.playbackRate.value = 0.85 + Math.random() * 0.4;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = freq * (0.9 + Math.random() * 0.2);
+    bp.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.13);
+    src.connect(bp); bp.connect(g); g.connect(this.comp);
+    src.start(t0, Math.random() * 0.25);
+    src.stop(t0 + 0.13);
+  },
+  hit(kind) {
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const t0 = ctx.currentTime;
+    // 三档判定：perfect 碎得最亮最脆，good 最闷最轻
+    const conf = {
+      perfect: { thump: 0.3, crack: 0.5, crackF: 5200 },
+      great: { thump: 0.24, crack: 0.4, crackF: 4200 },
+      good: { thump: 0.18, crack: 0.3, crackF: 3300 },
+    }[kind];
+    if (!conf) return;
+    this.thump(t0, conf.thump);
+    this.crack(t0, conf.crack, conf.crackF);
+  },
+  // 通用短音（miss / 断连 / hold 轻响）
   play({ freq = 600, dur = 0.08, noise = true, type = 'triangle', vol = 0.5, slide = 0 }) {
     const ctx = this.ensure();
     if (!ctx) return;
@@ -43,7 +106,7 @@ const SFX = {
     const out = ctx.createGain();
     out.gain.setValueAtTime(vol, t0);
     out.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-    out.connect(ctx.destination);
+    out.connect(this.comp);
     // 音高层：短促敲击音
     const osc = ctx.createOscillator();
     osc.type = type;
@@ -64,18 +127,9 @@ const SFX = {
       const nOut = ctx.createGain();
       nOut.gain.setValueAtTime(vol * 0.7, t0);
       nOut.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-      src.connect(hp); hp.connect(nOut); nOut.connect(ctx.destination);
+      src.connect(hp); hp.connect(nOut); nOut.connect(this.comp);
       src.start(t0);
     }
-  },
-  hit(kind) {
-    // 三档判定不同音高：perfect 最高最亮
-    const conf = {
-      perfect: { freq: 1200, dur: 0.09, vol: 0.45, slide: -300 },
-      great: { freq: 900, dur: 0.08, vol: 0.38, slide: -200 },
-      good: { freq: 700, dur: 0.07, vol: 0.3, slide: -150 },
-    }[kind];
-    if (conf) this.play(conf);
   },
   miss() { this.play({ freq: 160, dur: 0.16, type: 'sawtooth', vol: 0.22, slide: -80, noise: false }); },
   break_() { this.play({ freq: 320, dur: 0.2, type: 'square', vol: 0.25, slide: -240, noise: false }); },
@@ -276,6 +330,9 @@ els.startBtn.addEventListener('click', async () => {
   if (els.startBtn.disabled) return;
   els.startBtn.disabled = true;   // 防重入
   SFX.ensure();   // 用户手势解锁音效
+  // 借点击手势进入全屏；不支持或被浏览器拒绝时静默继续
+  try { await document.documentElement.requestFullscreen(); }
+  catch { document.documentElement.webkitRequestFullscreen?.(); }
   els.devBtn.classList.add('hidden');   // 游戏开始后隐藏调试入口
   // 触屏设备显示暂停按钮（桌面用 Esc）
   if (matchMedia('(pointer: coarse)').matches) els.pauseBtn.classList.remove('hidden');
